@@ -1,0 +1,14 @@
+# dependências e build
+node_modules
+dist
+
+# configuração local (IDs de medição ficam aqui)
+.env
+.env.*
+!.env.example
+
+# sistema e editores
+.DS_Store
+*.log
+.vscode
+.idea

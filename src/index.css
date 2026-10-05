@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Identidade Nosso Projeto 3D (mesma paleta do catálogo): fundo marrom quase preto, dourado como acento,
+   títulos em Fraunces e texto em Work Sans. A marca é escura, então o app fica sempre no tema escuro. */
+:root,
+.dark {
+  --background: #120e09;
+  --foreground: #f4efe3;
+  --card: #17130d;
+  --card-foreground: #f4efe3;
+  --popover: #17130d;
+  --popover-foreground: #f4efe3;
+  --primary: #c9a227;
+  --primary-foreground: #120e09;
+  --secondary: #241c12;
+  --secondary-foreground: #f4efe3;
+  --muted: #241c12;
+  --muted-foreground: #a69c87;
+  --accent: #241c12;
+  --accent-foreground: #f4efe3;
+  --destructive: #f28b7f;
+  --border: #3a3226;
+  --input: #4d4331;
+  --ring: #e7c873;
+  --primary-ink: #e7c873;
+  --warn: #f0a04b;
+  --warn-bg: #2a1d0e;
+  --add: #86d9a8;
+  --add-bg: #12281c;
+  --del: #f28b7f;
+  --del-bg: #2e1512;
+  --radius: 0.625rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary-ink: var(--primary-ink);
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
+  --color-add: var(--add);
+  --color-add-bg: var(--add-bg);
+  --color-del: var(--del);
+  --color-del-bg: var(--del-bg);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: "Work Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  @keyframes accordion-down {
+    from { height: 0; }
+    to { height: var(--radix-accordion-content-height); }
+  }
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height); }
+    to { height: 0; }
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  h1,
+  h2 {
+    font-family: var(--font-serif);
+  }
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+}
+
+/* Título com traço de camadas, como uma peça impressa. Entra uma vez, camada por camada. */
+.title-layers {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--foreground) 0 3px,
+    color-mix(in oklab, var(--foreground) 24%, var(--background)) 3px 4px
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: layers-print 1.2s steps(22, end) both;
+}
+@keyframes layers-print {
+  from { clip-path: inset(100% -0.1em -0.3em -0.1em); }
+  to { clip-path: inset(-0.1em -0.1em -0.3em -0.1em); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .title-layers { animation: none; }
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
