@@ -26,10 +26,6 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
-        env:
-          # Configure em Settings > Secrets and variables > Actions > Variables
-          VITE_GA_ID: ${{ vars.VITE_GA_ID }}
-          VITE_META_PIXEL_ID: ${{ vars.VITE_META_PIXEL_ID }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
