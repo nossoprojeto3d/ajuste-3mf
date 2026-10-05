@@ -2,10 +2,10 @@
 node_modules
 dist
 
-# configuração local (IDs de medição ficam aqui)
-.env
-.env.*
-!.env.example
+# o .env deste projeto vai para o repositório (só tem o ID público do Analytics).
+# Segredos de verdade, se um dia existirem, ficam em .env.local, que não sobe.
+.env.local
+.env.*.local
 
 # sistema e editores
 .DS_Store

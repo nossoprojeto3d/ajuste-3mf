@@ -39,17 +39,20 @@ npm test           # lógica do 3MF: leitura, validação e gravação
 npm run typecheck
 ```
 
-## Medição de uso (opcional)
+## Medição de uso
 
-Para ver quantas pessoas usam o app e em que etapa param:
+O ID do Google Analytics fica no arquivo `.env`, que vai junto com o código. Ele é público (aparece no site publicado), então não há problema em subir.
 
-1. Copie `.env.example` para `.env`.
-2. Preencha `VITE_GA_ID` (Google Analytics 4, formato `G-XXXXXXXXXX`) e, se for anunciar, `VITE_META_PIXEL_ID`.
-3. Rode `npm run build`. Os IDs entram no build, então mudar o `.env` exige um novo build.
+```
+VITE_GA_ID=G-PNRZ6JQWLP
+VITE_META_PIXEL_ID=
+```
 
-O `.env` não vai para o repositório (está no `.gitignore`). Se publicar por GitHub Actions, configure os IDs como variáveis do repositório.
+Para trocar o ID ou ligar o Meta Pixel, edite o `.env` e envie. A publicação automática já usa esse arquivo. Deixe os campos vazios para desligar a medição.
 
-Com os campos vazios, nada é medido e nenhum script externo é carregado. Com ID configurado, aparece um aviso de cookies e os scripts só carregam depois do "Aceitar". Quem usa "Não rastrear" no navegador não é medido e não vê o aviso.
+Segredos de verdade (senhas, chaves privadas), se um dia existirem, não vão no `.env`: use `.env.local`, que o `.gitignore` bloqueia.
+
+Com ID configurado, aparece um aviso de cookies e os scripts só carregam depois do "Aceitar". Quem usa "Não rastrear" no navegador não é medido e não vê o aviso.
 
 Eventos enviados: `arquivo_lido`, `resumo_copiado`, `resposta_conferida`, `3mf_baixado`, `lista_baixada` e `instagram_clique`. Nunca vão para a medição o arquivo, o nome dele, o resumo ou a resposta do Claude.
 
@@ -57,11 +60,7 @@ Eventos enviados: `arquivo_lido`, `resumo_copiado`, `resposta_conferida`, `3mf_b
 
 A publicação é automática: a cada envio para a branch `main` (ou `master`), o GitHub roda os testes, faz o build e publica. O arquivo está em `.github/workflows/deploy.yml`.
 
-Configuração, uma vez só:
-
-1. No repositório `ajuste-3mf`, vá em **Settings > Pages** e em **Source** escolha **GitHub Actions**.
-2. Em **Settings > Secrets and variables > Actions > Variables**, crie a variável `VITE_GA_ID` com o ID do Google Analytics (e `VITE_META_PIXEL_ID`, se usar).
-3. Envie o código. O site fica em `nossoprojeto3d.github.io/ajuste-3mf/`.
+Configuração, uma vez só: no repositório `ajuste-3mf`, vá em **Settings > Pages** e em **Source** escolha **GitHub Actions**. O site fica em `nossoprojeto3d.github.io/ajuste-3mf/`.
 
 Para publicar na mão, rode `npm run build` e publique o conteúdo de `dist`. O `base: './'` do Vite faz o site funcionar em qualquer subcaminho.
 
