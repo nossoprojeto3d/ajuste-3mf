@@ -232,9 +232,11 @@ function Stepper({
 function HeroTitle() {
   const words = "Seu 3MF configurado por IA.".split(" ")
   return (
-    <h1 className="text-[clamp(2.6rem,7.2vw,4.75rem)] leading-[1.02] font-semibold tracking-[-0.045em]">
+    <h1 id="hero-title" className="text-[clamp(2.6rem,7.2vw,4.75rem)] leading-[1.02] font-semibold tracking-[-0.045em]">
       <span className="sr-only">Seu 3MF configurado por IA.</span>
-      <span aria-hidden="true" className="shine">
+      {/* O reflexo (.shine) fica em cada palavra, por dentro da animação: no Safari, o texto recortado
+          num pai some quando os filhos animam numa camada própria. */}
+      <span aria-hidden="true">
         {words.map((w, i) => (
           <span key={i} className="inline-block overflow-hidden pb-[0.08em] align-top">
             <m.span
@@ -243,7 +245,9 @@ function HeroTitle() {
               animate={{ y: 0 }}
               transition={{ duration: 0.9, delay: 0.08 + i * 0.07, ease: EASE }}
             >
-              {w}
+              <span className="shine" style={{ animationDelay: `${0.9 + i * 0.12}s` }}>
+                {w}
+              </span>
               {i < words.length - 1 && " "}
             </m.span>
           </span>
@@ -276,6 +280,7 @@ export default function App() {
   const toolRef = useRef<HTMLElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const focusOnEnter = useRef(false)
+  const copiedTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const reduce = useReducedMotion()
 
   useEffect(() => {
@@ -415,7 +420,16 @@ export default function App() {
       requestAnimationFrame(scrollToTool)
       return
     }
-    await handleBuffer(await file.arrayBuffer(), file.name, false)
+    let buf: ArrayBuffer
+    try {
+      buf = await file.arrayBuffer()
+    } catch {
+      setFileError("Não consegui ler o arquivo no navegador. Tente escolher de novo.")
+      setView(1)
+      toast.error("Arquivo não aceito.")
+      return
+    }
+    await handleBuffer(buf, file.name, false)
   }
 
   async function loadExample() {
@@ -427,7 +441,8 @@ export default function App() {
       await navigator.clipboard.writeText(summary)
       track("resumo_copiado")
       setCopied(true)
-      setTimeout(() => setCopied(false), 2200)
+      clearTimeout(copiedTimer.current)
+      copiedTimer.current = setTimeout(() => setCopied(false), 2200)
       toast.success("Resumo copiado. Cole no Claude.")
     } catch {
       const ta = document.getElementById("summary") as HTMLTextAreaElement | null
@@ -577,9 +592,7 @@ export default function App() {
                   <Cube weight="duotone" className="size-4 text-primary-ink" />
                   Para projetos do Bambu Studio
                 </m.p>
-                <div id="hero-title">
-                  <HeroTitle />
-                </div>
+                <HeroTitle />
                 <m.p
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}

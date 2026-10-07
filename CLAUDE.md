@@ -42,7 +42,7 @@ Todo push na `main` dispara o `.github/workflows/deploy.yml`, que roda os testes
 
 ## Imagens
 
-O logo, o favicon e o ícone do iPhone ficam em `public/`, numa versão em cor única no laranja da página (`#ff6b2c`), gerada a partir do logo dourado do catálogo. Se o logo mudar, gere de novo: mesma forma, pintada com o laranja. A imagem de prévia do link (`og:image`) continua o logo dourado do catálogo. O app não usa fotos: o visual do topo é a cena 3D. Imagens próprias vão em `public/`.
+O logo, o favicon e o ícone do iPhone ficam em `public/`, numa versão em cor única no laranja da página (`#ff6b2c`), gerada a partir do logo dourado do catálogo. Se o logo mudar, gere de novo: mesma forma, pintada com o laranja. A prévia do link no WhatsApp e nas redes é `public/og.jpg` (1200×630, captura do topo da página com o vaso no meio da impressão). Se o topo mudar, gere de novo. O app não usa fotos: o visual do topo é a cena 3D. Imagens próprias vão em `public/`.
 
 ## Roteiro de teste
 

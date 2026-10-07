@@ -155,6 +155,8 @@ export default function PrintScene({ className }: { className?: string }) {
     }
     window.addEventListener("pointermove", onPointer, { passive: true })
 
+    let running = false
+
     const resize = () => {
       const w = el.clientWidth
       const h = el.clientHeight
@@ -164,11 +166,9 @@ export default function PrintScene({ className }: { className?: string }) {
       renderer.domElement.style.height = h + "px"
       camera.aspect = w / h
       camera.updateProjectionMatrix()
+      // Mudar o tamanho apaga o canvas: com a animação parada, desenha de novo na hora.
+      if (!running) renderer.render(scene, camera)
     }
-    const ro = new ResizeObserver(resize)
-    ro.observe(el)
-    resize()
-
     const segsPerLayer = POINTS * 2
     const posArr = geo.getAttribute("position").array as Float32Array
 
@@ -192,7 +192,6 @@ export default function PrintScene({ className }: { className?: string }) {
     let rotY = 0
     let start = performance.now()
     let raf = 0
-    let running = false
 
     function frame(now: number) {
       const t = (now - start) / 1000
@@ -242,8 +241,14 @@ export default function PrintScene({ className }: { className?: string }) {
       paint(colors, LAYERS + 20)
       setProgress(LAYERS)
       piece.rotation.y = 0.6
-      renderer.render(scene, camera)
+    } else {
+      paint(colors, 0)
+      setProgress(0)
     }
+    // Primeiro tamanho e primeiro quadro só depois de a peça estar no estado inicial.
+    const ro = new ResizeObserver(resize)
+    ro.observe(el)
+    resize()
 
     // Só anima quando está na tela e a aba está visível.
     let visible = true
@@ -266,7 +271,9 @@ export default function PrintScene({ className }: { className?: string }) {
       geo.dispose()
       mat.dispose()
       bedGeo.dispose()
+      ;(bed.material as PointsMaterial).dispose()
       glowGeo.dispose()
+      ;(glow.material as PointsMaterial).dispose()
       nozzle.geometry.dispose()
       ;(nozzle.material as MeshBasicMaterial).dispose()
       renderer.dispose()

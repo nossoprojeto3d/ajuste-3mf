@@ -180,22 +180,26 @@
     0 10px 36px -8px color-mix(in oklab, var(--primary) 95%, transparent);
 }
 
-/* Texto do título com reflexo de metal que passa uma vez. */
-.shine {
-  background: linear-gradient(
-    100deg,
-    var(--foreground) 0%,
-    var(--foreground) 40%,
-    #ffd3bd 50%,
-    var(--foreground) 60%,
-    var(--foreground) 100%
-  );
-  background-size: 250% 100%;
-  background-position: 100% 0;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: shine 2.4s var(--ease-out-quint) 0.9s both;
+/* Texto do título com reflexo de metal que passa uma vez. Só deixa a cor transparente onde o
+   recorte do fundo no texto funciona; nos outros navegadores o título fica na cor normal. */
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  .shine {
+    background: linear-gradient(
+      100deg,
+      var(--foreground) 0%,
+      var(--foreground) 40%,
+      #ffd3bd 50%,
+      var(--foreground) 60%,
+      var(--foreground) 100%
+    );
+    background-size: 250% 100%;
+    background-position: 100% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: shine 1.6s var(--ease-out-quint) 0.9s both;
+  }
 }
 @keyframes shine {
   to { background-position: 0% 0; }
