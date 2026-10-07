@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { toast } from "sonner"
-import { Check, Copy, Download, Instagram, Lock, OctagonX, TriangleAlert, Upload } from "lucide-react"
+import { Check, Copy, Download, Instagram, Lock, OctagonX, RotateCcw, TriangleAlert, Upload } from "lucide-react"
 
 import {
   Accordion,
@@ -377,6 +377,25 @@ export default function App() {
     toast.success("Lista de alterações baixada.")
   }
 
+  // Volta ao passo 1 para ajustar outro arquivo; mantém impressora e filamento, limpa as observações da peça
+  function restart() {
+    setProject(null)
+    setFileName("")
+    setIsExample(false)
+    setFileError("")
+    setItems([])
+    setChecked({})
+    setApplied(false)
+    setApplyError("")
+    setRemoveOv(false)
+    setDownloaded(false)
+    setPaste("")
+    setTab("resumo")
+    set("notes", "")
+    track("recomecar")
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
   const st = (n: number): StepState => (stage >= n ? "done" : stage === n - 1 ? "active" : "wait")
   const s = STAGES[stage]
 
@@ -748,6 +767,17 @@ export default function App() {
                       </ButtonGroup>
                       {isExample && selected.length > 0 && (
                         <p className="text-sm text-muted-foreground">Este é um exemplo de demonstração. O download libera quando você usar um arquivo seu.</p>
+                      )}
+                      {(downloaded || isExample) && (
+                        <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="text-sm text-muted-foreground">
+                            {downloaded ? "Pronto! Quer ajustar outra peça?" : "Gostou? Comece com um arquivo seu."}
+                          </p>
+                          <Button variant="secondary" onClick={restart} className="max-sm:w-full">
+                            <RotateCcw />
+                            {downloaded ? "Ajustar outro arquivo" : "Começar com meu arquivo"}
+                          </Button>
+                        </div>
                       )}
                     </div>
                   )}
