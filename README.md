@@ -8,7 +8,7 @@ App web que deixa a IA configurar o projeto do Bambu Studio. Você envia o `.3mf
 
 1. **Arquivo:** o app lê o `.3mf`, mostra impressora, bico, filamentos e objetos do projeto e preenche o formulário com o que encontrou.
 2. **Resumo:** com impressora, bico, AMS, tipo e marca do filamento, uso da peça, prioridade e observações, o app monta um texto para você colar numa conversa com o Claude.
-3. **Resposta:** o Claude responde com um JSON de ajustes. Você cola no app, desmarca o que não quiser e baixa o `-ajustado.3mf` (ou só a lista de alterações em `.txt`).
+3. **Resposta:** o Claude responde com um JSON de ajustes. Você cola no app, desmarca o que não quiser e baixa o `-ajustado.3mf`.
 
 Só entram na lista as configurações conhecidas e dentro de faixas seguras (cerca de 55 chaves). O que estiver fora disso aparece como ignorado. Se um objeto tem ajuste próprio que vence o valor global, o app avisa e oferece remover esse ajuste.
 
@@ -54,7 +54,7 @@ Segredos de verdade (senhas, chaves privadas), se um dia existirem, não vão no
 
 Com ID configurado, aparece um aviso de cookies e os scripts só carregam depois do "Aceitar". Quem usa "Não rastrear" no navegador não é medido e não vê o aviso.
 
-Eventos enviados: `arquivo_lido`, `resumo_copiado`, `resposta_conferida`, `3mf_baixado`, `lista_baixada` e `instagram_clique`. Nunca vão para a medição o arquivo, o nome dele, o resumo ou a resposta do Claude.
+Eventos enviados: `arquivo_lido`, `resumo_copiado`, `resposta_conferida`, `3mf_baixado`, `recomecar` e `instagram_clique`. Nunca vão para a medição o arquivo, o nome dele, o resumo ou a resposta do Claude.
 
 ## Publicar (GitHub Pages)
 

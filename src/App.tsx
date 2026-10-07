@@ -34,7 +34,6 @@ import { ConsentBanner } from "@/components/consent-banner"
 import {
   buildModified,
   buildSummary,
-  changesText,
   detect,
   evaluateChanges,
   extractJson,
@@ -365,16 +364,6 @@ export default function App() {
     } finally {
       setBusy(false)
     }
-  }
-
-  function downloadList() {
-    if (!project || !selected.length) return
-    saveBlob(
-      new Blob([changesText(project, form, fileName, selected)], { type: "text/plain;charset=utf-8" }),
-      fileName.replace(/\.3mf$/i, "") + "-alteracoes.txt"
-    )
-    track("lista_baixada")
-    toast.success("Lista de alterações baixada.")
   }
 
   // Volta ao passo 1 para ajustar outro arquivo; mantém impressora e filamento, limpa as observações da peça
@@ -761,23 +750,13 @@ export default function App() {
                           {busy ? <Spinner /> : <Download />}
                           {selected.length ? `Baixar 3MF ajustado (${selected.length})` : "Baixar 3MF ajustado"}
                         </Button>
-                        <Button variant="outline" onClick={downloadList} disabled={!selected.length}>
-                          Baixar lista (.txt)
+                        <Button variant="outline" onClick={restart}>
+                          <RotateCcw />
+                          {isExample ? "Começar com meu arquivo" : "Ajustar outro arquivo"}
                         </Button>
                       </ButtonGroup>
                       {isExample && selected.length > 0 && (
                         <p className="text-sm text-muted-foreground">Este é um exemplo de demonstração. O download libera quando você usar um arquivo seu.</p>
-                      )}
-                      {(downloaded || isExample) && (
-                        <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
-                          <p className="text-sm text-muted-foreground">
-                            {downloaded ? "Pronto! Quer ajustar outra peça?" : "Gostou? Comece com um arquivo seu."}
-                          </p>
-                          <Button variant="secondary" onClick={restart} className="max-sm:w-full">
-                            <RotateCcw />
-                            {downloaded ? "Ajustar outro arquivo" : "Começar com meu arquivo"}
-                          </Button>
-                        </div>
                       )}
                     </div>
                   )}

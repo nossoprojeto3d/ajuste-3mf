@@ -48,5 +48,5 @@ Usado pelo `/conferir-site` com `npm run dev`, no celular (390px) e no desktop (
 2. Enviar um `.3mf` de teste. Se não houver na máquina, pergunte ao usuário qual usar. Impressora, bico, filamentos e objetos são preenchidos.
 3. Copiar o resumo: o texto sai com os dados do formulário.
 4. Colar um JSON de ajustes, incluindo uma chave fora da faixa: as mudanças aparecem com valor de antes e depois, e a chave fora da faixa aparece como ignorada.
-5. Desmarcar um ajuste e baixar o `-ajustado.3mf` e a lista `.txt`.
+5. Desmarcar um ajuste e baixar o `-ajustado.3mf`. "Ajustar outro arquivo" volta para a etapa 1 sem perder impressora e filamento.
 6. Desktop: as três colunas rolam por dentro e a página não fica comprida.
