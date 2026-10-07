@@ -7,7 +7,7 @@ Publicado em https://nossoprojeto3d.github.io/ajuste-3mf/. O README.md explica o
 
 React 19, Vite 6, TypeScript, Tailwind v4 e shadcn/ui (new-york v4). É o único projeto com build. Animações com Motion (`motion/react`), cena 3D com Three.js (carregada à parte) e ícones do Phosphor.
 
-Visual "oficina técnica", diferente do catálogo de propósito: sempre escuro, grafite quase preto, um único acento laranja-filamento (`--primary`), Geist no texto e Geist Mono nos dados (fontes do `@fontsource-variable`, sem Google Fonts). O logo continua o da marca.
+Visual "oficina técnica", diferente do catálogo de propósito: sempre escuro, grafite quase preto, um único acento laranja-filamento (`--primary`), Geist no texto e Geist Mono nos dados (fontes do `@fontsource-variable`, sem Google Fonts). O logo é o da marca, em versão laranja só neste app.
 
 ```bash
 npm run dev        # http://localhost:5173
@@ -42,7 +42,7 @@ Todo push na `main` dispara o `.github/workflows/deploy.yml`, que roda os testes
 
 ## Imagens
 
-A logo e o favicon vêm do site do catálogo (limitação conhecida). O app não usa fotos: o visual do topo é a cena 3D. Imagens próprias vão em `public/`.
+O logo, o favicon e o ícone do iPhone ficam em `public/`, numa versão em cor única no laranja da página (`#ff6b2c`), gerada a partir do logo dourado do catálogo. Se o logo mudar, gere de novo: mesma forma, pintada com o laranja. A imagem de prévia do link (`og:image`) continua o logo dourado do catálogo. O app não usa fotos: o visual do topo é a cena 3D. Imagens próprias vão em `public/`.
 
 ## Roteiro de teste
 

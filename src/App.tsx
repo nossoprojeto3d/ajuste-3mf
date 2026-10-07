@@ -52,7 +52,8 @@ import {
 // A cena 3D é pesada (Three.js): carrega à parte, depois do resto da página.
 const PrintScene = lazy(() => import("@/components/print-scene"))
 
-const LOGO = "https://nossoprojeto3d.github.io/catalogo/logo.png"
+// Logo da marca em cor única, no laranja da página (gerado a partir do logo do catálogo).
+const LOGO = import.meta.env.BASE_URL + "logo.png"
 const INSTAGRAM = "https://instagram.com/nossoprojeto3d"
 
 const OPT = {
