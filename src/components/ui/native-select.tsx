@@ -1,9 +1,9 @@
 import * as React from "react"
-import { ChevronDownIcon } from "lucide-react"
+import { CaretDown } from "@phosphor-icons/react"
 
 import { cn } from "@/lib/utils"
 
-/* Única mudança sobre o original: o wrapper é w-full (era w-fit) para os campos preencherem a coluna. */
+/* Mudanças sobre o original: o wrapper é w-full (era w-fit) para os campos preencherem a coluna, e a seta é do Phosphor. */
 function NativeSelect({
   className,
   size = "default",
@@ -25,8 +25,8 @@ function NativeSelect({
         )}
         {...props}
       />
-      <ChevronDownIcon
-        className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-muted-foreground opacity-50 select-none"
+      <CaretDown
+        className="pointer-events-none absolute top-1/2 right-3.5 size-3.5 -translate-y-1/2 text-muted-foreground opacity-70 select-none"
         aria-hidden="true"
         data-slot="native-select-icon"
       />

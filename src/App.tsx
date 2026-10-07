@@ -1,33 +1,37 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { AnimatePresence, LazyMotion, MotionConfig, domAnimation, m, useReducedMotion } from "motion/react"
 import { toast } from "sonner"
-import { Check, Copy, Download, Instagram, Lock, OctagonX, RotateCcw, TriangleAlert, Upload } from "lucide-react"
-
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
+  ArrowCounterClockwise,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpRight,
+  Check,
+  CheckCircle,
+  CircleNotch,
+  Copy,
+  Cube,
+  DownloadSimple,
+  FileArrowUp,
+  InstagramLogo,
+  UploadSimple,
+  Warning,
+  WarningOctagon,
+} from "@phosphor-icons/react"
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ButtonGroup } from "@/components/ui/button-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { InputGroup, InputGroupAddon, InputGroupTextarea } from "@/components/ui/input-group"
-import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item"
 import { Kbd } from "@/components/ui/kbd"
 import { Label } from "@/components/ui/label"
 import { NativeSelect } from "@/components/ui/native-select"
-import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Spinner } from "@/components/ui/spinner"
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Toaster } from "@/components/ui/sonner"
+import { Faq, Footer } from "@/components/faq"
 import { cn } from "@/lib/utils"
 import { track } from "@/lib/analytics"
 import { ConsentBanner } from "@/components/consent-banner"
@@ -44,6 +48,12 @@ import {
   type FormData3mf,
   type Project,
 } from "@/lib/threemf"
+
+// A cena 3D é pesada (Three.js): carrega à parte, depois do resto da página.
+const PrintScene = lazy(() => import("@/components/print-scene"))
+
+const LOGO = "https://nossoprojeto3d.github.io/catalogo/logo.png"
+const INSTAGRAM = "https://instagram.com/nossoprojeto3d"
 
 const OPT = {
   printer: ["Bambu Lab A1", "Bambu Lab A1 mini", "Bambu Lab P1S", "Bambu Lab P1P", "Bambu Lab X1 Carbon", "Bambu Lab X1E", "Bambu Lab H2D"],
@@ -66,15 +76,18 @@ const DEFAULT_FORM: FormData3mf = {
 }
 const PREFS_KEY = "ajuste3mf.prefs"
 
-const STAGES = [
-  { v: 0, label: "Etapa 1 de 3", text: "Escolha o arquivo .3mf" },
-  { v: 33, label: "Etapa 2 de 3", text: "Copie o resumo e peça ao Claude" },
-  { v: 66, label: "Etapa 3 de 3", text: "Confira as alterações e baixe" },
-  { v: 100, label: "Pronto", text: "Abra no Bambu Studio e fatie de novo" },
+type View = 1 | 2 | 3
+
+const STEPS: { n: View; title: string; hint: string }[] = [
+  { n: 1, title: "Arquivo", hint: "Envie o projeto e confira a impressão" },
+  { n: 2, title: "Claude", hint: "Copie o resumo e peça os ajustes" },
+  { n: 3, title: "Aplicar", hint: "Confira as mudanças e baixe" },
 ]
 
 const STATUS_LABEL = { change: "Muda", same: "Já está assim", bad: "Ignorada" } as const
 const STATUS_VARIANT = { change: "default", same: "secondary", bad: "destructive" } as const
+
+const EASE = [0.22, 1, 0.36, 1] as const
 
 function loadForm(): FormData3mf {
   try {
@@ -104,72 +117,12 @@ function saveBlob(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 4000)
 }
 
-type StepState = "done" | "active" | "wait"
-
-function StepMark({ n, state, className }: { n: number; state: StepState; className?: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "grid size-8 shrink-0 place-items-center rounded-full border text-sm font-semibold transition-colors",
-        state === "done" && "border-primary bg-primary text-primary-foreground",
-        state === "active" && "border-primary-ink bg-background text-primary-ink ring-4 ring-primary/25",
-        state === "wait" && "border-border bg-muted text-muted-foreground",
-        className
-      )}
-    >
-      {state === "done" ? <Check className="size-4" strokeWidth={3} /> : n}
-    </span>
-  )
-}
-
-/* No celular, cada etapa é um item de linha do tempo (trilho à esquerda). No desktop, vira uma coluna com altura fixa e rolagem própria. */
-function Step({
-  n,
-  state,
-  title,
-  description,
-  last,
-  className,
-  children,
-}: {
-  n: number
-  state: StepState
-  title: string
-  description: string
-  last?: boolean
-  className?: string
-  children?: ReactNode
-}) {
-  const id = "t" + n
-  return (
-    <section
-      aria-labelledby={id}
-      className={cn(
-        "relative grid grid-cols-[2rem_1fr] gap-x-4 sm:gap-x-5 lg:flex lg:h-[var(--col-h)] lg:flex-col lg:gap-0 lg:overflow-hidden lg:rounded-xl lg:border lg:bg-card lg:p-5",
-        className
-      )}
-    >
-      <div className="flex flex-col items-center lg:hidden">
-        <StepMark n={n} state={state} />
-        {!last && <span aria-hidden="true" className={cn("mt-1 w-px flex-1", state === "done" ? "bg-primary-ink/50" : "bg-border")} />}
-      </div>
-      <div className={cn("min-w-0 pb-10 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:pb-0", last && "pb-0")}>
-        <div className={cn("grid gap-1 pt-0.5 lg:grid-cols-[2rem_1fr] lg:gap-x-3 lg:pt-0", children && "mb-4")}>
-          <StepMark n={n} state={state} className="hidden lg:row-span-2 lg:grid" />
-          <h2 id={id} className="text-lg leading-tight font-semibold tracking-tight">
-            {title}
-            <span className="sr-only">
-              {" "}
-              ({state === "done" ? "concluída" : state === "active" ? "em andamento" : "aguardando"})
-            </span>
-          </h2>
-          <p className="max-w-[62ch] text-sm text-muted-foreground">{description}</p>
-        </div>
-        {children && <div className="min-h-0 lg:-mx-1 lg:flex-1 lg:overflow-y-auto lg:px-1 lg:pb-1">{children}</div>}
-      </div>
-    </section>
-  )
+/** Atualiza a posição do brilho da borda (.spotlight) sem re-renderizar o React. */
+function trackSpot(e: React.PointerEvent<HTMLElement>) {
+  const el = e.currentTarget
+  const r = el.getBoundingClientRect()
+  el.style.setProperty("--mx", `${e.clientX - r.left}px`)
+  el.style.setProperty("--my", `${e.clientY - r.top}px`)
 }
 
 function SelectField({
@@ -188,9 +141,11 @@ function SelectField({
   className?: string
 }) {
   return (
-    <Field className={className}>
-      <Label htmlFor={id}>{label}</Label>
-      <NativeSelect id={id} value={value} onChange={(e) => onChange(e.target.value)}>
+    <Field className={cn("gap-2", className)}>
+      <Label htmlFor={id} className="text-[13px] font-normal text-muted-foreground">
+        {label}
+      </Label>
+      <NativeSelect id={id} name={id} value={value} onChange={(e) => onChange(e.target.value)} className="h-10 bg-background/60 dark:bg-background/60">
         {options.map((o) => (
           <option key={o} value={o}>
             {o}
@@ -201,24 +156,99 @@ function SelectField({
   )
 }
 
-function LockedEmpty({ title, text, skeleton }: { title: string; text: string; skeleton?: boolean }) {
+/** Título de cada etapa. Recebe o foco quando a etapa muda, para leitores de tela e teclado. */
+function StepHeading({ id, title, children, headingRef }: { id: string; title: string; children: ReactNode; headingRef: React.Ref<HTMLHeadingElement> }) {
   return (
-    <Empty className="border md:p-8">
-      <EmptyHeader>
-        <EmptyMedia variant="icon">
-          <Lock />
-        </EmptyMedia>
-        <EmptyTitle>{title}</EmptyTitle>
-        <EmptyDescription>{text}</EmptyDescription>
-      </EmptyHeader>
-      {skeleton && (
-        <div className="grid w-full max-w-xs gap-2" aria-hidden="true">
-          <Skeleton className="h-3" />
-          <Skeleton className="h-3 w-5/6" />
-          <Skeleton className="h-3 w-3/5" />
-        </div>
-      )}
-    </Empty>
+    <div className="grid gap-1.5">
+      <h2 id={id} ref={headingRef} tabIndex={-1} className="text-2xl font-semibold tracking-[-0.03em] outline-none sm:text-[1.75rem]">
+        {title}
+      </h2>
+      <p className="max-w-[60ch] text-muted-foreground">{children}</p>
+    </div>
+  )
+}
+
+function Stepper({
+  view,
+  onSelect,
+  reachable,
+  done,
+}: {
+  view: View
+  onSelect: (v: View) => void
+  reachable: (v: View) => boolean
+  done: (v: View) => boolean
+}) {
+  return (
+    <nav aria-label="Etapas" className="relative">
+      <ol className="relative grid grid-cols-3 gap-2">
+        {/* Trilho e preenchimento até a etapa atual */}
+        <span aria-hidden="true" className="absolute top-[19px] right-[16.66%] left-[16.66%] h-px bg-border" />
+        <m.span
+          aria-hidden="true"
+          className="absolute top-[19px] left-[16.66%] h-px w-[66.66%] origin-left bg-primary"
+          initial={false}
+          animate={{ scaleX: (view - 1) / 2 }}
+          transition={{ duration: 0.7, ease: EASE }}
+        />
+        {STEPS.map((s) => {
+          const active = view === s.n
+          const ok = done(s.n)
+          const can = reachable(s.n)
+          return (
+            <li key={s.n} className="relative flex justify-center">
+              <button
+                type="button"
+                disabled={!can}
+                onClick={() => onSelect(s.n)}
+                aria-current={active ? "step" : undefined}
+                className="group flex flex-col items-center gap-2 rounded-lg px-2 py-0 text-center outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed"
+              >
+                <span
+                  className={cn(
+                    "relative grid size-10 place-items-center rounded-full border font-mono text-sm transition-[background-color,border-color,color,box-shadow] duration-300",
+                    active && "border-primary bg-primary text-primary-foreground shadow-[0_0_0_6px_color-mix(in_oklab,var(--primary)_18%,transparent),0_0_24px_-4px_var(--primary)]",
+                    !active && ok && "border-primary/60 bg-background text-primary-ink",
+                    !active && !ok && "border-border bg-background text-muted-foreground",
+                    can && !active && "group-hover:border-primary/80"
+                  )}
+                >
+                  {ok && !active ? <Check weight="bold" className="size-4" /> : s.n}
+                </span>
+                <span className={cn("text-sm font-medium transition-colors", active ? "text-foreground" : "text-muted-foreground", can && "group-hover:text-foreground")}>
+                  {s.title}
+                </span>
+                <span className="hidden max-w-[22ch] text-xs text-muted-foreground/80 md:block">{s.hint}</span>
+              </button>
+            </li>
+          )
+        })}
+      </ol>
+    </nav>
+  )
+}
+
+function HeroTitle() {
+  const words = "Seu 3MF configurado pela IA.".split(" ")
+  return (
+    <h1 className="text-[clamp(2.6rem,7.2vw,4.75rem)] leading-[1.02] font-semibold tracking-[-0.045em]">
+      <span className="sr-only">Seu 3MF configurado pela IA.</span>
+      <span aria-hidden="true" className="shine">
+        {words.map((w, i) => (
+          <span key={i} className="inline-block overflow-hidden pb-[0.08em] align-top">
+            <m.span
+              className="inline-block"
+              initial={{ y: "105%" }}
+              animate={{ y: 0 }}
+              transition={{ duration: 0.9, delay: 0.08 + i * 0.07, ease: EASE }}
+            >
+              {w}
+              {i < words.length - 1 && " "}
+            </m.span>
+          </span>
+        ))}
+      </span>
+    </h1>
   )
 }
 
@@ -238,6 +268,14 @@ export default function App() {
   const [downloaded, setDownloaded] = useState(false)
   const [busy, setBusy] = useState(false)
   const [tab, setTab] = useState("resumo")
+  const [view, setView] = useState<View>(1)
+  const [copied, setCopied] = useState(false)
+
+  const fileInput = useRef<HTMLInputElement>(null)
+  const toolRef = useRef<HTMLElement>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  const focusOnEnter = useRef(false)
+  const reduce = useReducedMotion()
 
   useEffect(() => {
     try {
@@ -247,6 +285,45 @@ export default function App() {
     }
   }, [form])
 
+  // Arrastar um .3mf para qualquer lugar da página abre o arquivo.
+  const onFileRef = useRef<(f?: File) => Promise<void>>(async () => {})
+  onFileRef.current = onFile
+  useEffect(() => {
+    let depth = 0
+    const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes("Files")
+    const enter = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      depth++
+      setDragOver(true)
+    }
+    const over = (e: DragEvent) => {
+      if (hasFiles(e)) e.preventDefault()
+    }
+    const leave = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      depth = Math.max(0, depth - 1)
+      if (depth === 0) setDragOver(false)
+    }
+    const drop = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      depth = 0
+      setDragOver(false)
+      void onFileRef.current(e.dataTransfer?.files[0])
+    }
+    window.addEventListener("dragenter", enter)
+    window.addEventListener("dragover", over)
+    window.addEventListener("dragleave", leave)
+    window.addEventListener("drop", drop)
+    return () => {
+      window.removeEventListener("dragenter", enter)
+      window.removeEventListener("dragover", over)
+      window.removeEventListener("dragleave", leave)
+      window.removeEventListener("drop", drop)
+    }
+  }, [])
+
   const set = <K extends keyof FormData3mf>(k: K, v: FormData3mf[K]) => setForm((f) => ({ ...f, [k]: v }))
 
   const summary = useMemo(() => (project ? buildSummary(project, form, fileName) : ""), [project, form, fileName])
@@ -254,13 +331,13 @@ export default function App() {
     if (!project) return []
     const d = detect(project)
     const rows: [string, string][] = [
-      ["Impressora no arquivo", d.printer || "não informada"],
-      ["Bico no arquivo", d.nozzle ? d.nozzle + " mm" : "não informado"],
+      ["Impressora", d.printer || "não informada"],
+      ["Bico", d.nozzle ? d.nozzle + " mm" : "não informado"],
       ["Filamentos", d.types.length ? d.types.length + ": " + [...new Set(d.types)].join(", ") : "não informado"],
       [
         "Objetos",
         project.objects.length
-          ? project.objects.length + ": " + project.objects.slice(0, 3).map((o) => o.name).join(", ") + (project.objects.length > 3 ? "..." : "")
+          ? project.objects.length + ": " + project.objects.slice(0, 3).map((o) => o.name).join(", ") + (project.objects.length > 3 ? "…" : "")
           : "não informado",
       ],
       ["Placas", String(project.plates || 1)],
@@ -271,9 +348,25 @@ export default function App() {
 
   const selected = items.filter((it, i) => it.status === "change" && checked[i])
   const conflictItems = selected.filter((it) => it.conflicts.length > 0)
-  const stage = downloaded ? 3 : applied ? 2 : project ? 1 : 0
   const counts = { change: 0, same: 0, bad: 0 }
   items.forEach((it) => counts[it.status]++)
+
+  const reachable = (v: View) => v === 1 || !!project
+  const done = (v: View) => (v === 1 ? !!project : v === 2 ? applied : downloaded)
+
+  function scrollToTool() {
+    const el = toolRef.current
+    if (!el) return
+    const top = el.getBoundingClientRect().top
+    if (top < 0 || top > window.innerHeight * 0.5) el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" })
+  }
+
+  function goTo(v: View) {
+    if (!reachable(v) || v === view) return
+    focusOnEnter.current = true
+    setView(v)
+    scrollToTool()
+  }
 
   async function handleBuffer(buf: ArrayBuffer, name: string, example: boolean) {
     setFileError("")
@@ -298,13 +391,17 @@ export default function App() {
       setDownloaded(false)
       setPaste("")
       setTab("resumo")
+      setView(1)
       track("arquivo_lido", { exemplo: example })
       toast.success("Arquivo lido: " + name)
+      requestAnimationFrame(scrollToTool)
     } catch (e) {
       setProject(null)
       setApplied(false)
+      setView(1)
       setFileError((e as Error).message)
       toast.error("Arquivo não aceito.")
+      requestAnimationFrame(scrollToTool)
     }
   }
 
@@ -312,16 +409,24 @@ export default function App() {
     if (!file) return
     if (!/\.3mf$/i.test(file.name)) {
       setFileError("Este não é um arquivo .3mf. Salve a peça como projeto no Bambu Studio e envie o .3mf.")
+      setView(1)
       toast.error("Arquivo não aceito.")
+      requestAnimationFrame(scrollToTool)
       return
     }
     await handleBuffer(await file.arrayBuffer(), file.name, false)
+  }
+
+  async function loadExample() {
+    await handleBuffer(await makeExample(), "projeto-exemplo.3mf", true)
   }
 
   async function copySummary() {
     try {
       await navigator.clipboard.writeText(summary)
       track("resumo_copiado")
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2200)
       toast.success("Resumo copiado. Cole no Claude.")
     } catch {
       const ta = document.getElementById("summary") as HTMLTextAreaElement | null
@@ -339,6 +444,7 @@ export default function App() {
       setItems(result)
       setChecked(Object.fromEntries(result.map((it, i) => [i, it.status === "change"])))
       setApplied(true)
+      setDownloaded(false)
       const n = result.filter((it) => it.status === "change").length
       track("resposta_conferida", { alteracoes: n })
       if (n) toast.success(n + (n === 1 ? " alteração pronta para conferir." : " alterações prontas para conferir."))
@@ -366,7 +472,7 @@ export default function App() {
     }
   }
 
-  // Volta ao passo 1 para ajustar outro arquivo; mantém impressora e filamento, limpa as observações da peça
+  // Volta à etapa 1 para ajustar outro arquivo; mantém impressora e filamento, limpa as observações da peça
   function restart() {
     setProject(null)
     setFileName("")
@@ -382,444 +488,558 @@ export default function App() {
     setTab("resumo")
     set("notes", "")
     track("recomecar")
-    window.scrollTo({ top: 0, behavior: "smooth" })
+    focusOnEnter.current = true
+    setView(1)
+    requestAnimationFrame(scrollToTool)
   }
 
-  const st = (n: number): StepState => (stage >= n ? "done" : stage === n - 1 ? "active" : "wait")
-  const s = STAGES[stage]
+  const statusText = !project
+    ? "Etapa 1 de 3: escolha o arquivo .3mf"
+    : downloaded
+      ? "Pronto: abra no Bambu Studio e fatie de novo"
+      : `Etapa ${view} de 3: ${STEPS[view - 1].hint.toLowerCase()}`
+
+  const panel = {
+    initial: reduce ? { opacity: 0 } : { opacity: 0, y: 18, filter: "blur(6px)" },
+    animate: { opacity: 1, y: 0, filter: "blur(0px)" },
+    exit: reduce ? { opacity: 0 } : { opacity: 0, y: -10, filter: "blur(4px)" },
+    transition: { duration: 0.45, ease: EASE },
+  }
 
   return (
-    <>
-      <div className="mx-auto w-full max-w-[1680px] px-4 pt-6 pb-20 sm:px-6 lg:px-10 lg:pt-6">
-        <nav aria-label="Nosso Projeto 3D" className="mb-8 flex items-center justify-between gap-4 border-b pb-4 lg:mb-6">
-          <a href="https://instagram.com/nossoprojeto3d" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 rounded-md font-semibold tracking-tight outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
-            <img src="https://nossoprojeto3d.github.io/catalogo/logo.png" alt="" className="h-9 w-auto" />
-            <span className="font-serif text-base whitespace-nowrap sm:text-lg">Nosso Projeto 3D</span>
-          </a>
-          <Button asChild variant="outline" size="sm">
-            <a href="https://instagram.com/nossoprojeto3d" target="_blank" rel="noopener noreferrer" onClick={() => track("instagram_clique")} aria-label="Abrir o Instagram @nossoprojeto3d (abre em outra aba)">
-              <Instagram />
-              @nossoprojeto3d
-            </a>
-          </Button>
-        </nav>
-
-        <header
-          className={cn(
-            "grid gap-5 pb-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-end lg:gap-x-14 lg:gap-y-4 lg:pb-8",
-            /* Com um arquivo aberto, o texto de apresentação sai e as colunas ganham a altura toda. */
-            project && "lg:grid-cols-[1fr_auto] lg:items-center lg:pb-4"
-          )}
+    <MotionConfig reducedMotion="user">
+      <LazyMotion features={domAnimation} strict>
+        <a
+          href="#ferramenta"
+          className="fixed top-3 left-3 z-[70] -translate-y-20 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground focus:translate-y-0"
         >
-          <h1
-            className={cn(
-              "title-layers w-fit max-w-[16ch] px-1 pt-[0.05em] pb-[0.2em] text-[clamp(2.75rem,8.5vw,5.25rem)] leading-[1.05] font-bold tracking-[-0.025em] text-balance lg:row-span-2 lg:text-[clamp(3rem,5vw,5.25rem)]",
-              project && "lg:row-span-1 lg:max-w-none lg:text-[clamp(1.75rem,2.6vw,2.5rem)]"
-            )}
-          >
-            Seu 3MF configurado pela IA.
-          </h1>
-          <div className={cn("grid max-w-[60ch] gap-3 text-lg text-muted-foreground lg:text-base", project && "lg:hidden")}>
-            <p>
-              Envie seu arquivo 3MF, escolha o que deseja ajustar e deixe a IA cuidar do resto. Ela analisa sua peça, impressora, filamento e
-              objetivo da impressão, sugere as melhores configurações e explica cada alteração.
-            </p>
-            <p>Você aprova o que quiser, o app aplica as mudanças e devolve o 3MF pronto para baixar e importar no Bambu Studio.</p>
-          </div>
-          <div role="status" aria-live="polite" className="flex items-center gap-3 text-sm">
-            <span className="flex gap-1" aria-hidden="true">
-              {[0, 1, 2].map((i) => (
-                <span key={i} className={cn("h-1.5 w-8 rounded-full transition-colors", stage > i ? "bg-primary" : "bg-border")} />
-              ))}
-            </span>
-            <span className="font-medium whitespace-nowrap">{s.label}</span>
-            <span className="text-muted-foreground">{s.text}</span>
-          </div>
-        </header>
+          Pular para a ferramenta
+        </a>
 
-        <main
-          className={cn(
-            "grid items-start gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-5 xl:gap-6 [--col-h:max(34rem,calc(100dvh-21rem))]",
-            project && "lg:[--col-h:max(34rem,calc(100dvh-11rem))]"
-          )}
-        >
-          {/* Bancada: arquivo e impressão */}
-          <aside
-            aria-label="Arquivo e impressão"
-            className="grid content-start gap-5 lg:h-[var(--col-h)] lg:overflow-y-auto lg:rounded-xl lg:border lg:bg-card lg:p-5"
-          >
-            <div className="hidden lg:grid lg:grid-cols-[2rem_1fr] lg:gap-x-3">
-              <StepMark n={1} state={st(1)} className="row-span-2" />
-              <h2 className="text-lg leading-tight font-semibold tracking-tight">Arquivo e impressão</h2>
-              <p className="text-sm text-muted-foreground">Envie o .3mf e confira os dados da impressora e do filamento.</p>
-            </div>
-            <label
-              htmlFor="file"
-              onDragEnter={(e) => { e.preventDefault(); setDragOver(true) }}
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-              onDragLeave={(e) => { e.preventDefault(); setDragOver(false) }}
-              onDrop={(e) => { e.preventDefault(); setDragOver(false); void onFile(e.dataTransfer.files[0]) }}
-              className={cn(
-                "cursor-pointer rounded-xl border border-dashed border-input bg-card transition-colors hover:border-primary-ink hover:bg-primary/10 focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50",
-                project && "border-solid border-primary-ink/60",
-                dragOver && "border-primary-ink bg-primary/10"
-              )}
-            >
-              <input
-                id="file"
-                type="file"
-                accept=".3mf"
-                className="sr-only"
-                onChange={(e) => {
-                  void onFile(e.target.files?.[0])
-                  e.target.value = ""
-                }}
-              />
-              <Empty className={cn("border-0 md:p-8 lg:p-5", project && "lg:p-3")}>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon" className={cn(project && "lg:hidden")}>
-                    <Upload />
-                  </EmptyMedia>
-                  <EmptyTitle className="break-all">{project ? fileName + (isExample ? " (exemplo)" : "") : "Escolha o arquivo .3mf"}</EmptyTitle>
-                  <EmptyDescription>
-                    {project
-                      ? "Clique ou solte outro arquivo para trocar."
-                      : "ou solte aqui. Precisa ser um projeto salvo pelo Bambu Studio (Arquivo, Salvar projeto como)."}
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            </label>
+        <input
+          ref={fileInput}
+          id="file"
+          name="file"
+          type="file"
+          accept=".3mf"
+          className="sr-only"
+          tabIndex={-1}
+          aria-hidden="true"
+          onChange={(e) => {
+            void onFile(e.target.files?.[0])
+            e.target.value = ""
+          }}
+        />
 
-            {fileError && (
-              <Alert variant="destructive">
-                <OctagonX />
-                <AlertTitle>Não consegui usar este arquivo</AlertTitle>
-                <AlertDescription>{fileError}</AlertDescription>
-              </Alert>
-            )}
-
-            {project && (
-              <div className="overflow-hidden rounded-xl border bg-card">
-                <Table aria-label="Dados lidos do arquivo" className="lg:[&_td]:py-1.5">
-                  <TableBody>
-                    {info.map(([k, v]) => (
-                      <TableRow key={k}>
-                        <TableCell className="w-[38%] text-muted-foreground">{k}</TableCell>
-                        <TableCell className="font-mono text-[13px] whitespace-normal break-words">{v}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-
-            {project?.sliced && (
-              <Alert className="border-warn/30 bg-warn-bg text-warn">
-                <TriangleAlert />
-                <AlertTitle>Este arquivo já foi fatiado</AlertTitle>
-                <AlertDescription className="text-inherit">
-                  Depois de abrir o arquivo ajustado, fatie de novo no Bambu Studio para valer as novas configurações.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="rounded-xl border bg-card p-5 lg:border-0 lg:bg-transparent lg:p-0">
-              <h2 className="mb-4 text-base font-semibold tracking-tight lg:sr-only">Impressora e filamento</h2>
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-x-3 gap-y-3.5">
-                <SelectField id="fPrinter" label="Impressora" value={form.printer} options={OPT.printer} onChange={(v) => set("printer", v)} />
-                <SelectField id="fNozzle" label="Bico (mm)" value={form.nozzle} options={OPT.nozzle} onChange={(v) => set("nozzle", v)} />
-                <SelectField id="fAms" label="AMS" value={form.ams} options={OPT.ams} onChange={(v) => set("ams", v)} />
-                <SelectField id="fType" label="Tipo de filamento" value={form.filType} options={OPT.type} onChange={(v) => set("filType", v)} />
-                <SelectField id="fBrand" label="Marca" value={form.brand} options={BRANDS} onChange={(v) => set("brand", v)} />
-                <SelectField id="fPrio" label="Prioridade" value={form.prio} options={OPT.prio} onChange={(v) => set("prio", v)} />
-                <SelectField id="fUse" label="Uso da peça" value={form.use} options={OPT.use} onChange={(v) => set("use", v)} className="col-span-full" />
-                <Field className="col-span-full">
-                  <Label htmlFor="fNotes">Observações (opcional)</Label>
-                  <Input
-                    id="fNotes"
-                    autoComplete="off"
-                    placeholder="Ex.: encaixe justo, vai ficar ao sol, peça de 30 cm"
-                    value={form.notes}
-                    onChange={(e) => set("notes", e.target.value)}
-                  />
-                  <FieldDescription>Quanto mais contexto, mais certeiras as sugestões.</FieldDescription>
-                </Field>
-              </div>
-            </div>
-
-            {!project && (
-              <div className="flex flex-wrap items-center gap-x-3 text-sm text-muted-foreground">
-                Sem um arquivo agora?
-                <Button
-                  type="button"
-                  variant="link"
-                  className="h-auto p-0 text-primary-ink"
-                  onClick={async () => handleBuffer(await makeExample(), "projeto-exemplo.3mf", true)}
-                >
-                  Ver com um projeto de exemplo
+        <div className="grain relative min-h-dvh overflow-x-clip">
+          {/* Navegação flutuante */}
+          <header className="fixed inset-x-0 top-3 z-40 px-3 sm:top-4">
+            <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 rounded-2xl border border-hairline-strong bg-background/70 px-3 shadow-[0_10px_40px_-20px_rgba(0,0,0,0.9)] backdrop-blur-xl sm:px-4">
+              <a href={INSTAGRAM} target="_blank" rel="noopener noreferrer" className="flex min-w-0 items-center gap-2.5 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+                <img src={LOGO} alt="" width={32} height={32} className="size-8 object-contain" />
+                <span className="truncate text-[15px] font-semibold tracking-tight">
+                  Nosso Projeto 3D <span className="font-normal text-muted-foreground">/ Ajuste 3MF</span>
+                </span>
+              </a>
+              <nav aria-label="Atalhos" className="flex items-center gap-1">
+                <a href="#ferramenta" className="hidden rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground md:block">
+                  Ferramenta
+                </a>
+                <a href="#duvidas" className="hidden rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground md:block">
+                  Dúvidas
+                </a>
+                <Button asChild variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                  <a href={INSTAGRAM} target="_blank" rel="noopener noreferrer" onClick={() => track("instagram_clique")} aria-label="Abrir o Instagram @nossoprojeto3d (abre em outra aba)">
+                    <InstagramLogo className="size-5" />
+                  </a>
                 </Button>
-              </div>
-            )}
-          </aside>
+              </nav>
+            </div>
+          </header>
 
-          {/* Linha do tempo: passos do Claude ao download */}
-          <div className="min-w-0 lg:contents">
-            <Step
-              n={1}
-              className="lg:hidden"
-              state={st(1)}
-              title={project ? "Arquivo lido" : "Escolha o arquivo"}
-              description={project ? "O projeto foi aberto. Confira à esquerda se impressora e filamento estão certos." : "Envie o projeto .3mf na coluna ao lado para começar."}
-            >
-              {project ? (
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <Badge variant="outline" className="font-mono">{fileName}</Badge>
-                  <span className="text-muted-foreground">
-                    {project.objects.length} {project.objects.length === 1 ? "objeto" : "objetos"}, {project.plates || 1} {(project.plates || 1) === 1 ? "placa" : "placas"}
-                  </span>
+          {/* Hero */}
+          <section aria-labelledby="hero-title" className="relative isolate">
+            <div aria-hidden="true" className="bed-grid pointer-events-none absolute inset-0 -z-10" />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute top-[18%] right-[-10%] -z-10 size-[min(70vw,640px)] rounded-full opacity-40 blur-3xl max-lg:top-[48%] max-lg:right-[-30%]"
+              style={{ background: "radial-gradient(circle, color-mix(in oklab, var(--primary) 55%, transparent), transparent 65%)" }}
+            />
+            <div className="mx-auto grid max-w-6xl items-center gap-6 px-4 pt-28 pb-10 sm:px-6 sm:pt-32 lg:min-h-[min(100dvh,820px)] lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-10 lg:pt-24 lg:pb-16">
+              <div className="grid gap-6">
+                <m.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, ease: EASE }}
+                  className="flex w-fit items-center gap-2 rounded-full border border-hairline-strong bg-card/60 px-3 py-1 text-[13px] text-muted-foreground"
+                >
+                  <Cube weight="duotone" className="size-4 text-primary-ink" />
+                  Para projetos do Bambu Studio
+                </m.p>
+                <div id="hero-title">
+                  <HeroTitle />
                 </div>
-              ) : null}
-            </Step>
+                <m.p
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, delay: 0.45, ease: EASE }}
+                  className="max-w-[44ch] text-lg leading-relaxed text-muted-foreground"
+                >
+                  Envie o projeto do Bambu Studio, peça ajustes ao Claude e baixe pronto. Seu arquivo nunca sai do navegador.
+                </m.p>
+                <m.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, delay: 0.55, ease: EASE }}
+                  className="flex flex-wrap items-center gap-3"
+                >
+                  <Button size="lg" className="btn-hot h-12 rounded-xl px-5 text-[15px] max-sm:flex-1" onClick={() => fileInput.current?.click()}>
+                    <UploadSimple weight="bold" />
+                    Escolher arquivo .3mf
+                  </Button>
+                  <Button size="lg" variant="ghost" className="h-12 rounded-xl px-4 text-[15px] text-muted-foreground hover:text-foreground max-sm:flex-1" onClick={loadExample}>
+                    Ver um exemplo
+                    <ArrowRight />
+                  </Button>
+                </m.div>
+              </div>
 
-            <Step
-              n={2}
-              state={st(2)}
-              title="Peça as sugestões ao Claude"
-              description="Copie o resumo do projeto e cole numa conversa com o Claude. Ele responde com as configurações que valem a pena mudar nessa peça, cada uma com o motivo."
-            >
-              {!project ? (
-                <LockedEmpty title="Resumo ainda não gerado" text="Ele aparece aqui assim que você escolher o arquivo." skeleton />
-              ) : (
-                <Tabs value={tab} onValueChange={setTab} className="lg:h-full">
-                  <TabsList className="max-sm:w-full">
-                    <TabsTrigger value="resumo">Resumo</TabsTrigger>
-                    <TabsTrigger value="formato">Formato da resposta</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="resumo" className="lg:min-h-0 lg:flex-1">
-                    <InputGroup className="lg:h-full lg:has-[>textarea]:h-full">
-                      <InputGroupTextarea
-                        id="summary"
-                        readOnly
-                        value={summary}
-                        aria-label="Resumo do projeto para o Claude"
-                        className="field-sizing-fixed h-64 font-mono text-[13px] leading-relaxed lg:h-[max(12rem,calc(var(--col-h)-18.5rem))] lg:flex-none"
-                      />
-                      <InputGroupAddon align="block-end" className="flex-wrap">
-                        <Button size="sm" onClick={copySummary}>
-                          <Copy />
-                          Copiar resumo
-                        </Button>
-                        <Button size="sm" variant="outline" asChild>
-                          <a href="https://claude.ai/new" target="_blank" rel="noopener noreferrer">
-                            Abrir o Claude
-                          </a>
-                        </Button>
-                        <span className="ml-auto flex items-center gap-1 text-xs font-normal">
-                          Copiar manualmente: <Kbd>Ctrl</Kbd>
-                          <Kbd>C</Kbd>
-                        </span>
-                      </InputGroupAddon>
-                    </InputGroup>
-                  </TabsContent>
-                  <TabsContent value="formato">
-                    <div className="flex flex-col gap-3">
-                      <FieldDescription>
-                        O resumo já pede este formato ao Claude. Cada item traz a chave da configuração, o novo valor e o motivo.
-                      </FieldDescription>
-                      <pre className="overflow-x-auto rounded-md border bg-muted p-3 font-mono text-[13px] leading-relaxed">{`{
+              <m.div
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 1.2, delay: 0.2, ease: EASE }}
+                className="relative h-[300px] sm:h-[380px] lg:h-[540px]"
+              >
+                <Suspense fallback={null}>
+                  <PrintScene className="absolute inset-0" />
+                </Suspense>
+              </m.div>
+            </div>
+          </section>
+
+          {/* Ferramenta: uma etapa em foco por vez */}
+          <main id="ferramenta" ref={toolRef} aria-label="Ferramenta" className="relative mx-auto max-w-6xl scroll-mt-28 px-4 pb-24 sm:px-6">
+            <div className="grid gap-8">
+              <Stepper view={view} onSelect={goTo} reachable={reachable} done={done} />
+              <p role="status" aria-live="polite" className="sr-only">
+                {statusText}
+              </p>
+
+              {/* Moldura dupla: casca fina por fora, núcleo por dentro */}
+              <div onPointerMove={trackSpot} className="spotlight rounded-[1.6rem] border border-hairline bg-white/[0.015] p-1.5 sm:p-2">
+                <div className="relative overflow-hidden rounded-[calc(1.6rem-0.5rem)] border border-hairline-strong bg-card shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                  <AnimatePresence
+                    mode="wait"
+                    initial={false}
+                    onExitComplete={() => {
+                      if (focusOnEnter.current) {
+                        focusOnEnter.current = false
+                        requestAnimationFrame(() => headingRef.current?.focus({ preventScroll: true }))
+                      }
+                    }}
+                  >
+                    {view === 1 && (
+                      <m.section key="v1" aria-labelledby="s1" {...panel} className="grid gap-8 p-4 sm:p-8 lg:p-10">
+                        <StepHeading id="s1" title={project ? "Arquivo lido" : "Escolha o arquivo"} headingRef={headingRef}>
+                          {project
+                            ? "Confira se impressora e filamento estão certos. O app preencheu o que encontrou no projeto."
+                            : "Precisa ser um projeto salvo pelo Bambu Studio (Arquivo, Salvar projeto como)."}
+                        </StepHeading>
+
+                        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-10">
+                          <div className="grid content-start gap-4">
+                            <button
+                              type="button"
+                              onClick={() => fileInput.current?.click()}
+                              className={cn(
+                                "group relative grid w-full place-items-center gap-3 overflow-hidden rounded-2xl border border-dashed border-input bg-background/50 px-6 text-center outline-none transition-[border-color,background-color] duration-300 hover:border-primary/70 hover:bg-primary/[0.04] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                                project ? "py-6" : "py-12 sm:py-16",
+                                dragOver && "border-primary bg-primary/[0.06]"
+                              )}
+                            >
+                              <span className="grid size-12 place-items-center rounded-xl border border-hairline-strong bg-card text-primary-ink transition-transform duration-500 group-hover:-translate-y-0.5">
+                                {project ? <FileArrowUp weight="duotone" className="size-6" /> : <UploadSimple weight="bold" className="size-6" />}
+                              </span>
+                              <span className="grid gap-1">
+                                <span className="font-medium break-all">
+                                  {project ? fileName + (isExample ? " (exemplo)" : "") : "Escolher arquivo .3mf"}
+                                </span>
+                                <span className="text-sm text-muted-foreground">
+                                  {project ? "Clique ou solte outro arquivo para trocar." : "ou arraste o arquivo para qualquer lugar da página"}
+                                </span>
+                              </span>
+                            </button>
+
+                            {fileError && (
+                              <Alert variant="destructive">
+                                <WarningOctagon weight="duotone" />
+                                <AlertTitle>Não consegui usar este arquivo</AlertTitle>
+                                <AlertDescription>{fileError}</AlertDescription>
+                              </Alert>
+                            )}
+
+                            {project && (
+                              <dl className="grid overflow-hidden rounded-xl border border-hairline-strong text-sm">
+                                {info.map(([k, v], i) => (
+                                  <m.div
+                                    key={k}
+                                    initial={{ opacity: 0, x: -6 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ duration: 0.4, delay: 0.05 * i, ease: EASE }}
+                                    className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-3 border-b border-hairline px-4 py-2.5 last:border-b-0"
+                                  >
+                                    <dt className="text-muted-foreground">{k}</dt>
+                                    <dd className="font-mono text-[13px] break-words">{v}</dd>
+                                  </m.div>
+                                ))}
+                              </dl>
+                            )}
+
+                            {project?.sliced && (
+                              <Alert className="border-warn/30 bg-warn-bg text-warn">
+                                <Warning weight="duotone" />
+                                <AlertTitle>Este arquivo já foi fatiado</AlertTitle>
+                                <AlertDescription className="text-inherit">
+                                  Depois de abrir o arquivo ajustado, fatie de novo no Bambu Studio para valer as novas configurações.
+                                </AlertDescription>
+                              </Alert>
+                            )}
+
+                            {!project && (
+                              <p className="text-sm text-muted-foreground">
+                                Sem um arquivo agora?{" "}
+                                <button type="button" onClick={loadExample} className="rounded font-medium text-primary-ink underline-offset-4 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50">
+                                  Ver um exemplo
+                                </button>
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="grid content-start gap-5">
+                            <h3 className="text-base font-semibold">Impressora e filamento</h3>
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-4">
+                              <SelectField id="fPrinter" label="Impressora" value={form.printer} options={OPT.printer} onChange={(v) => set("printer", v)} className="col-span-2 sm:col-span-1" />
+                              <SelectField id="fNozzle" label="Bico (mm)" value={form.nozzle} options={OPT.nozzle} onChange={(v) => set("nozzle", v)} />
+                              <SelectField id="fAms" label="AMS" value={form.ams} options={OPT.ams} onChange={(v) => set("ams", v)} />
+                              <SelectField id="fType" label="Tipo de filamento" value={form.filType} options={OPT.type} onChange={(v) => set("filType", v)} />
+                              <SelectField id="fBrand" label="Marca" value={form.brand} options={BRANDS} onChange={(v) => set("brand", v)} />
+                              <SelectField id="fPrio" label="Prioridade" value={form.prio} options={OPT.prio} onChange={(v) => set("prio", v)} className="col-span-2 sm:col-span-1" />
+                              <SelectField id="fUse" label="Uso da peça" value={form.use} options={OPT.use} onChange={(v) => set("use", v)} className="col-span-2" />
+                              <Field className="col-span-2 gap-2">
+                                <Label htmlFor="fNotes" className="text-[13px] font-normal text-muted-foreground">
+                                  Observações (opcional)
+                                </Label>
+                                <Input
+                                  id="fNotes"
+                                  name="notes"
+                                  autoComplete="off"
+                                  className="h-10 bg-background/60 dark:bg-background/60"
+                                  placeholder="Ex.: encaixe justo, vai ficar ao sol, peça de 30 cm…"
+                                  value={form.notes}
+                                  onChange={(e) => set("notes", e.target.value)}
+                                />
+                                <FieldDescription>Quanto mais contexto, mais certeiras as sugestões.</FieldDescription>
+                              </Field>
+                            </div>
+                          </div>
+                        </div>
+
+                        {project && (
+                          <div className="flex justify-end border-t border-hairline pt-6">
+                            <Button size="lg" className="btn-hot h-12 rounded-xl px-5 max-sm:w-full" onClick={() => goTo(2)}>
+                              Continuar para o Claude
+                              <ArrowRight weight="bold" />
+                            </Button>
+                          </div>
+                        )}
+                      </m.section>
+                    )}
+
+                    {view === 2 && project && (
+                      <m.section key="v2" aria-labelledby="s2" {...panel} className="grid gap-8 p-4 sm:p-8 lg:p-10">
+                        <StepHeading id="s2" title="Peça as sugestões ao Claude" headingRef={headingRef}>
+                          O resumo traz os dados do projeto e já pede a resposta no formato certo. O Claude devolve só o que vale mudar nessa peça, com o motivo.
+                        </StepHeading>
+
+                        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-8">
+                          <Tabs value={tab} onValueChange={setTab} className="min-w-0 gap-3">
+                            <TabsList className="max-sm:w-full">
+                              <TabsTrigger value="resumo">Resumo</TabsTrigger>
+                              <TabsTrigger value="formato">Formato da resposta</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="resumo">
+                              <div className="overflow-hidden rounded-xl border border-hairline-strong bg-background/70">
+                                <div className="flex items-center justify-between gap-3 border-b border-hairline px-4 py-2">
+                                  <span className="flex items-center gap-1.5" aria-hidden="true">
+                                    <span className="size-2.5 rounded-full bg-white/10" />
+                                    <span className="size-2.5 rounded-full bg-white/10" />
+                                    <span className="size-2.5 rounded-full bg-white/10" />
+                                  </span>
+                                  <span className="truncate font-mono text-xs text-muted-foreground" translate="no">
+                                    resumo · {fileName}
+                                  </span>
+                                </div>
+                                <textarea
+                                  id="summary"
+                                  readOnly
+                                  value={summary}
+                                  aria-label="Resumo do projeto para o Claude"
+                                  spellCheck={false}
+                                  className="block h-72 w-full resize-none bg-transparent p-4 font-mono text-[12.5px] leading-relaxed text-foreground/90 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40 focus-visible:ring-inset sm:h-80"
+                                />
+                              </div>
+                            </TabsContent>
+                            <TabsContent value="formato">
+                              <div className="grid gap-3">
+                                <p className="text-sm text-muted-foreground">
+                                  O resumo já pede este formato ao Claude. Cada item traz a chave da configuração, o novo valor e o motivo.
+                                </p>
+                                <pre className="overflow-x-auto rounded-xl border border-hairline-strong bg-background/70 p-4 font-mono text-[12.5px] leading-relaxed">{`{
   "resumo": "Peça decorativa com curvas, priorizando acabamento",
   "alteracoes": [
     { "chave": "layer_height", "valor": "0.16", "motivo": "mais detalhe nas curvas" },
     { "chave": "wall_loops", "valor": 3, "motivo": "superfície mais firme" }
   ]
 }`}</pre>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              )}
-            </Step>
+                              </div>
+                            </TabsContent>
+                          </Tabs>
 
-            <Step
-              n={3}
-              state={st(3)}
-              last
-              title="Aplique e baixe"
-              description="Cole a resposta do Claude. O app mostra o valor de antes e o de depois de cada mudança, e você desmarca o que não quiser antes de baixar."
-            >
-              {!project ? (
-                <LockedEmpty title="Nada para aplicar ainda" text="Escolha o arquivo para liberar esta etapa." />
-              ) : (
-                <div className="flex flex-col gap-4">
-                  <Field>
-                    <Label htmlFor="paste">Resposta do Claude</Label>
-                    <Textarea
-                      id="paste"
-                      value={paste}
-                      onChange={(e) => setPaste(e.target.value)}
-                      className={cn("field-sizing-fixed h-40 font-mono text-[13px] lg:h-44", applied && "lg:h-24")}
-                      placeholder={'Cole aqui a resposta inteira. Exemplo:\n{"alteracoes":[{"chave":"layer_height","valor":"0.16","motivo":"mais detalhe nas curvas"}]}'}
-                    />
-                  </Field>
-                  <div>
-                    <Button onClick={applyResponse}>Conferir alterações</Button>
-                  </div>
-
-                  {applyError && (
-                    <Alert variant="destructive">
-                      <OctagonX />
-                      <AlertTitle>Não consegui ler a resposta</AlertTitle>
-                      <AlertDescription>{applyError}</AlertDescription>
-                    </Alert>
-                  )}
-
-                  {applied && (
-                    <div className="flex flex-col gap-4">
-                      <Separator />
-                      <div role="status" className="flex flex-wrap items-center gap-2">
-                        <Badge>{counts.change + (counts.change === 1 ? " pronta para aplicar" : " prontas para aplicar")}</Badge>
-                        {counts.same > 0 && <Badge variant="secondary">{counts.same + (counts.same === 1 ? " já estava assim" : " já estavam assim")}</Badge>}
-                        {counts.bad > 0 && <Badge variant="destructive">{counts.bad + (counts.bad === 1 ? " ignorada" : " ignoradas")}</Badge>}
-                        <span className="text-sm text-muted-foreground">Desmarque o que não quiser.</span>
-                      </div>
-
-                      <ItemGroup className="gap-2">
-                        {items.map((it, i) => (
-                          <Item key={i} asChild variant={it.status === "change" ? "outline" : "muted"} size="sm" className="items-start bg-card">
-                            <label htmlFor={"chk" + i}>
-                              <ItemMedia className="pt-0.5">
-                                <Checkbox
-                                  id={"chk" + i}
-                                  checked={!!checked[i]}
-                                  disabled={it.status !== "change"}
-                                  aria-label={"Aplicar " + (it.spec ? it.spec.label : it.key)}
-                                  onCheckedChange={(v) => setChecked((c) => ({ ...c, [i]: v === true }))}
-                                />
-                              </ItemMedia>
-                              <ItemContent className="min-w-0">
-                                <ItemTitle className="flex-wrap items-baseline gap-x-2 gap-y-0">
-                                  <span>{it.spec ? it.spec.label : it.key || "Sem chave"}</span>
-                                  {it.spec && <span className="font-mono text-xs font-normal break-all text-muted-foreground">{it.key}</span>}
-                                </ItemTitle>
-                                {it.status === "change" && (
-                                  <div className="flex flex-wrap items-center gap-1.5 font-mono text-[13px] break-words">
-                                    <span className="rounded bg-del-bg px-1.5 py-0.5 text-del line-through decoration-del/60">{fmtVal(it.spec, it.before)}</span>
-                                    <span aria-hidden="true" className="text-muted-foreground">→</span>
-                                    <span className="sr-only">para</span>
-                                    <span className="rounded bg-add-bg px-1.5 py-0.5 font-semibold text-add">{fmtVal(it.spec, it.after)}</span>
-                                  </div>
-                                )}
-                                {it.status === "same" && <div className="font-mono text-[13px]">{fmtVal(it.spec, it.before)}</div>}
-                                {it.msg && <p className="text-[13px] text-destructive">{it.msg}</p>}
-                                {it.reason && <ItemDescription className="line-clamp-none max-w-[70ch] text-pretty">{it.reason}</ItemDescription>}
-                                {it.conflicts.length > 0 && (
-                                  <p className="text-[13px] text-warn">
-                                    Ajuste próprio em: {it.conflicts.join(", ")}. Nesses objetos o valor global é ignorado.
-                                  </p>
-                                )}
-                              </ItemContent>
-                              <ItemActions>
-                                <Badge variant={STATUS_VARIANT[it.status]}>{STATUS_LABEL[it.status]}</Badge>
-                              </ItemActions>
-                            </label>
-                          </Item>
-                        ))}
-                      </ItemGroup>
-
-                      {conflictItems.length > 0 && (
-                        <div className="flex flex-col gap-4">
-                          <Alert className="border-warn/30 bg-warn-bg text-warn">
-                            <TriangleAlert />
-                            <AlertTitle>Ajustes próprios nos objetos</AlertTitle>
-                            <AlertDescription className="text-inherit">
-                              Alguns objetos têm ajuste próprio que vence o valor global:{" "}
-                              {[...new Set(conflictItems.flatMap((it) => it.conflicts.map((c) => `${c} (${it.key})`)))].join(", ")}.
-                            </AlertDescription>
-                          </Alert>
-                          <Field orientation="horizontal">
-                            <Checkbox id="rmOv" checked={removeOv} onCheckedChange={(v) => setRemoveOv(v === true)} />
-                            <FieldContent>
-                              <FieldLabel htmlFor="rmOv">Remover esses ajustes dos objetos</FieldLabel>
-                              <FieldDescription>Assim o valor novo vale para a peça inteira.</FieldDescription>
-                            </FieldContent>
-                          </Field>
+                          <div className="grid content-start gap-5">
+                            <ol className="grid gap-4 text-sm">
+                              {[
+                                ["Copie o resumo", "Um clique leva o texto inteiro."],
+                                ["Cole numa conversa nova", "No Claude, sem precisar explicar nada."],
+                                ["Traga a resposta", "Cole o JSON na próxima etapa."],
+                              ].map(([t, d], i) => (
+                                <li key={t} className="grid grid-cols-[1.75rem_1fr] gap-3">
+                                  <span className="grid size-7 place-items-center rounded-lg border border-hairline-strong font-mono text-xs text-primary-ink">{i + 1}</span>
+                                  <span>
+                                    <span className="block font-medium">{t}</span>
+                                    <span className="text-muted-foreground">{d}</span>
+                                  </span>
+                                </li>
+                              ))}
+                            </ol>
+                            <div className="grid gap-2.5">
+                              <Button size="lg" className="btn-hot h-12 rounded-xl" onClick={copySummary}>
+                                {copied ? <Check weight="bold" /> : <Copy weight="bold" />}
+                                {copied ? "Copiado" : "Copiar resumo"}
+                              </Button>
+                              <Button size="lg" variant="outline" className="h-12 rounded-xl" asChild>
+                                <a href="https://claude.ai/new" target="_blank" rel="noopener noreferrer">
+                                  Abrir o Claude
+                                  <ArrowUpRight />
+                                </a>
+                              </Button>
+                              <span className="hidden items-center justify-center gap-1 pt-1 text-xs text-muted-foreground sm:flex">
+                                ou selecione o texto e use <Kbd>Ctrl</Kbd>
+                                <Kbd>C</Kbd>
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      )}
 
-                      <ButtonGroup className="flex-wrap gap-2 max-sm:w-full max-sm:[&>*]:flex-1 lg:sticky lg:bottom-0 lg:z-10 lg:w-full lg:bg-card lg:py-3">
-                        <Button onClick={download} disabled={!selected.length || isExample || busy}>
-                          {busy ? <Spinner /> : <Download />}
-                          {selected.length ? `Baixar 3MF ajustado (${selected.length})` : "Baixar 3MF ajustado"}
-                        </Button>
-                        <Button variant="outline" onClick={restart}>
-                          <RotateCcw />
-                          {isExample ? "Começar com meu arquivo" : "Ajustar outro arquivo"}
-                        </Button>
-                      </ButtonGroup>
-                      {isExample && selected.length > 0 && (
-                        <p className="text-sm text-muted-foreground">Este é um exemplo de demonstração. O download libera quando você usar um arquivo seu.</p>
-                      )}
-                    </div>
-                  )}
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-6">
+                          <Button variant="ghost" className="text-muted-foreground hover:text-foreground" onClick={() => goTo(1)}>
+                            <ArrowLeft />
+                            Arquivo
+                          </Button>
+                          <Button size="lg" variant="secondary" className="h-12 rounded-xl px-5 max-sm:w-full" onClick={() => goTo(3)}>
+                            Já tenho a resposta
+                            <ArrowRight weight="bold" />
+                          </Button>
+                        </div>
+                      </m.section>
+                    )}
+
+                    {view === 3 && project && (
+                      <m.section key="v3" aria-labelledby="s3" {...panel} className="grid gap-8 p-4 sm:p-8 lg:p-10">
+                        <StepHeading id="s3" title="Aplique e baixe" headingRef={headingRef}>
+                          Cole a resposta do Claude. Você vê o valor de antes e o de depois de cada mudança e desmarca o que não quiser.
+                        </StepHeading>
+
+                        <div className={cn("grid gap-8", applied && "lg:grid-cols-[20rem_minmax(0,1fr)] lg:gap-10")}>
+                          <div className="grid content-start gap-3">
+                            <Label htmlFor="paste" className="text-[13px] font-normal text-muted-foreground">
+                              Resposta do Claude
+                            </Label>
+                            <Textarea
+                              id="paste"
+                              name="paste"
+                              value={paste}
+                              spellCheck={false}
+                              autoComplete="off"
+                              onChange={(e) => setPaste(e.target.value)}
+                              className={cn("field-sizing-fixed resize-none bg-background/60 font-mono text-[12.5px] dark:bg-background/60", applied ? "h-32 lg:h-56" : "h-48")}
+                              placeholder={'Cole aqui a resposta inteira, por exemplo:\n{"alteracoes":[{"chave":"layer_height","valor":"0.16","motivo":"mais detalhe nas curvas"}]}'}
+                            />
+                            <Button size="lg" variant={applied ? "outline" : "default"} className={cn("h-11 rounded-xl", !applied && "btn-hot")} onClick={applyResponse} disabled={!paste.trim()}>
+                              {applied ? "Conferir de novo" : "Conferir alterações"}
+                            </Button>
+                            {applyError && (
+                              <Alert variant="destructive">
+                                <WarningOctagon weight="duotone" />
+                                <AlertTitle>Não consegui ler a resposta</AlertTitle>
+                                <AlertDescription>{applyError} Copie a resposta inteira do Claude e tente de novo.</AlertDescription>
+                              </Alert>
+                            )}
+                          </div>
+
+                          {applied && (
+                            <div className="grid min-w-0 content-start gap-5">
+                              {downloaded && (
+                                <m.div
+                                  initial={{ opacity: 0, y: -8 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.5, ease: EASE }}
+                                  className="flex items-start gap-3 rounded-xl border border-add/30 bg-add-bg px-4 py-3 text-sm text-add"
+                                >
+                                  <CheckCircle weight="duotone" className="mt-0.5 size-5 shrink-0" />
+                                  <p>Arquivo gerado. Abra no Bambu Studio, confira no preview e fatie de novo para valer as mudanças.</p>
+                                </m.div>
+                              )}
+
+                              <div role="status" className="flex flex-wrap items-center gap-2 text-sm">
+                                <Badge className="tabular-nums">{counts.change + (counts.change === 1 ? " pronta para aplicar" : " prontas para aplicar")}</Badge>
+                                {counts.same > 0 && <Badge variant="secondary" className="tabular-nums">{counts.same + (counts.same === 1 ? " já estava assim" : " já estavam assim")}</Badge>}
+                                {counts.bad > 0 && <Badge variant="destructive" className="tabular-nums">{counts.bad + (counts.bad === 1 ? " ignorada" : " ignoradas")}</Badge>}
+                              </div>
+
+                              <ul className="grid gap-2">
+                                {items.map((it, i) => (
+                                  <m.li
+                                    key={i}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.45, delay: Math.min(i, 12) * 0.045, ease: EASE }}
+                                  >
+                                    <label
+                                      htmlFor={"chk" + i}
+                                      className={cn(
+                                        "grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 rounded-xl border px-4 py-3 transition-[border-color,background-color,opacity] duration-200",
+                                        it.status === "change" ? "border-hairline-strong bg-background/50 hover:border-primary/50" : "cursor-default border-hairline bg-transparent",
+                                        it.status === "change" && !checked[i] && "opacity-60"
+                                      )}
+                                    >
+                                      <Checkbox
+                                        id={"chk" + i}
+                                        className="mt-0.5"
+                                        checked={!!checked[i]}
+                                        disabled={it.status !== "change"}
+                                        aria-label={"Aplicar " + (it.spec ? it.spec.label : it.key)}
+                                        onCheckedChange={(v) => setChecked((c) => ({ ...c, [i]: v === true }))}
+                                      />
+                                      <span className="grid min-w-0 gap-1.5">
+                                        <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                          <span className={cn("font-medium", !it.spec && "font-mono text-sm")} translate={it.spec ? undefined : "no"}>{it.spec ? it.spec.label : it.key}</span>
+                                          {it.spec && (
+                                            <span className="font-mono text-xs text-muted-foreground" translate="no">
+                                              {it.key}
+                                            </span>
+                                          )}
+                                        </span>
+                                        {it.status === "change" && (
+                                          <span className="flex flex-wrap items-center gap-2 font-mono text-[13px] tabular-nums">
+                                            <span className="rounded-md bg-del-bg px-1.5 py-0.5 text-del line-through decoration-del/60">{fmtVal(it.spec, it.before)}</span>
+                                            <ArrowRight aria-label="para" className="size-3.5 text-muted-foreground" />
+                                            <span className="rounded-md bg-add-bg px-1.5 py-0.5 font-semibold text-add">{fmtVal(it.spec, it.after)}</span>
+                                          </span>
+                                        )}
+                                        {it.status === "same" && <span className="font-mono text-[13px] text-muted-foreground tabular-nums">{fmtVal(it.spec, it.before)}</span>}
+                                        {it.msg && <span className="text-[13px] text-destructive">{it.msg}</span>}
+                                        {it.reason && <span className="max-w-[70ch] text-sm text-muted-foreground">{it.reason}</span>}
+                                        {it.conflicts.length > 0 && (
+                                          <span className="text-[13px] text-warn">Ajuste próprio em: {it.conflicts.join(", ")}. Nesses objetos o valor global é ignorado.</span>
+                                        )}
+                                      </span>
+                                      <Badge variant={STATUS_VARIANT[it.status]}>{STATUS_LABEL[it.status]}</Badge>
+                                    </label>
+                                  </m.li>
+                                ))}
+                              </ul>
+
+                              {conflictItems.length > 0 && (
+                                <div className="grid gap-4">
+                                  <Alert className="border-warn/30 bg-warn-bg text-warn">
+                                    <Warning weight="duotone" />
+                                    <AlertTitle>Ajustes próprios nos objetos</AlertTitle>
+                                    <AlertDescription className="text-inherit">
+                                      Alguns objetos têm ajuste próprio que vence o valor global:{" "}
+                                      {[...new Set(conflictItems.flatMap((it) => it.conflicts.map((c) => `${c} (${it.key})`)))].join(", ")}.
+                                    </AlertDescription>
+                                  </Alert>
+                                  <Field orientation="horizontal">
+                                    <Checkbox id="rmOv" checked={removeOv} onCheckedChange={(v) => setRemoveOv(v === true)} />
+                                    <FieldContent>
+                                      <FieldLabel htmlFor="rmOv">Remover esses ajustes dos objetos</FieldLabel>
+                                      <FieldDescription>Assim o valor novo vale para a peça inteira.</FieldDescription>
+                                    </FieldContent>
+                                  </Field>
+                                </div>
+                              )}
+
+                              <div className="sticky bottom-3 z-10 -mx-1 grid gap-2 rounded-2xl border border-hairline-strong bg-popover/85 p-2 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)] backdrop-blur-xl sm:flex sm:flex-wrap">
+                                <Button size="lg" className="btn-hot h-12 rounded-xl px-5 sm:flex-1" onClick={download} disabled={!selected.length || isExample || busy}>
+                                  {busy ? <CircleNotch weight="bold" className="animate-spin" /> : <DownloadSimple weight="bold" />}
+                                  {busy ? "Gerando…" : selected.length ? `Baixar 3MF ajustado (${selected.length})` : "Baixar 3MF ajustado"}
+                                </Button>
+                                <Button size="lg" variant="outline" className="h-12 rounded-xl px-5" onClick={restart}>
+                                  <ArrowCounterClockwise weight="bold" />
+                                  {isExample ? "Começar com meu arquivo" : "Ajustar outro arquivo"}
+                                </Button>
+                              </div>
+                              {isExample && selected.length > 0 && (
+                                <p className="text-sm text-muted-foreground">Este é um exemplo de demonstração. O download libera quando você usar um arquivo seu.</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex border-t border-hairline pt-6">
+                          <Button variant="ghost" className="text-muted-foreground hover:text-foreground" onClick={() => goTo(2)}>
+                            <ArrowLeft />
+                            Resumo
+                          </Button>
+                        </div>
+                      </m.section>
+                    )}
+                  </AnimatePresence>
                 </div>
-              )}
-            </Step>
-          </div>
-        </main>
-      <section aria-labelledby="faq" className="mt-14 grid gap-6 border-t pt-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,2.1fr)] lg:gap-5 xl:gap-6">
-        <div className="grid content-start gap-2">
-          <h2 id="faq" className="text-xl font-semibold tracking-tight">Dúvidas comuns</h2>
-          <p className="max-w-[40ch] text-sm text-muted-foreground">Por que usar o Claude, o que o app altera, privacidade e custo.</p>
+              </div>
+            </div>
+          </main>
+
+          <Faq />
+          <Footer logo={LOGO} instagram={INSTAGRAM} />
         </div>
-        <div className="min-w-0 max-w-3xl">
-        <Accordion type="single" collapsible>
-          <AccordionItem value="porque">
-            <AccordionTrigger>Por que pedir ao Claude em vez de usar regras prontas?</AccordionTrigger>
-            <AccordionContent className="max-w-[70ch] text-muted-foreground">
-              O ajuste certo depende da peça, da impressora e do filamento. O Claude lê os dados do seu projeto e sugere valores para esse caso,
-              em vez de aplicar uma tabela fixa. Quando as boas práticas de impressão mudam, as sugestões mudam junto, sem precisar atualizar o
-              app.
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="custo">
-            <AccordionTrigger>Tem custo ou precisa de chave de API?</AccordionTrigger>
-            <AccordionContent className="max-w-[70ch] text-muted-foreground">
-              O app não cobra nada e não usa chave de API. As sugestões vêm da conversa que você abre no Claude e cola de volta aqui.
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="privacidade">
-            <AccordionTrigger>Meu arquivo vai para algum servidor?</AccordionTrigger>
-            <AccordionContent className="max-w-[70ch] text-muted-foreground">
-              Não. O 3MF é lido e regravado dentro do navegador. Só o texto do resumo sai daqui, e apenas quando você o copia e cola no Claude.
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="alteracoes">
-            <AccordionTrigger>O que o app consegue alterar?</AccordionTrigger>
-            <AccordionContent className="max-w-[70ch] text-muted-foreground">
-              Cerca de 55 configurações do Bambu Studio: qualidade e camadas, paredes e preenchimento, suportes e brim, velocidades e
-              temperaturas, ventoinha e torre de limpeza do multicolor. Valores fora de limites seguros e chaves desconhecidas são ignorados e
-              aparecem na lista.
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="fatiar">
-            <AccordionTrigger>Por que fatiar de novo no Bambu Studio?</AccordionTrigger>
-            <AccordionContent className="max-w-[70ch] text-muted-foreground">
-              O app muda as configurações do projeto, mas não gera o G-code. Abra o arquivo ajustado, confira no preview e fatie para valer as
-              alterações.
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="formato">
-            <AccordionTrigger>O 3MF não abriu ou faltou configuração.</AccordionTrigger>
-            <AccordionContent className="max-w-[70ch] text-muted-foreground">
-              O app só aceita projetos salvos pelo Bambu Studio (Arquivo, Salvar projeto como), porque é lá que ficam as configurações. Um 3MF
-              exportado só com a malha não serve.
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-        </div>
-      </section>
-      </div>
-      <ConsentBanner />
-      <Toaster position="bottom-center" />
-    </>
+
+        {/* Aviso ao arrastar um arquivo sobre a página */}
+        <AnimatePresence>
+          {dragOver && (
+            <m.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="pointer-events-none fixed inset-0 z-50 grid place-items-center bg-background/80 p-6 backdrop-blur-md"
+            >
+              <m.div
+                initial={{ scale: 0.94, y: 8 }}
+                animate={{ scale: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: EASE }}
+                className="grid place-items-center gap-3 rounded-3xl border-2 border-dashed border-primary/70 bg-card/80 px-14 py-12 text-center"
+              >
+                <UploadSimple weight="bold" className="size-9 text-primary-ink" />
+                <p className="text-lg font-medium">Solte o arquivo .3mf</p>
+              </m.div>
+            </m.div>
+          )}
+        </AnimatePresence>
+
+        <ConsentBanner />
+        <Toaster position="bottom-center" />
+      </LazyMotion>
+    </MotionConfig>
   )
 }

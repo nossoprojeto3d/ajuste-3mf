@@ -16,12 +16,12 @@ Marcas de filamento disponíveis: Multifila, Volt3D, Bambu Lab, 3D Lab, Polymake
 
 ## Layout
 
-- **Celular e tablet (abaixo de 1024px):** linha do tempo vertical, uma etapa depois da outra, com rolagem normal.
-- **Computador (1024px ou mais):** área de trabalho em três colunas que ocupa a largura da janela. Cada coluna rola por dentro, então a página não fica comprida.
+- **Topo:** apresentação curta e uma cena 3D de um vaso sendo impresso camada por camada.
+- **Ferramenta:** uma etapa em foco por vez (Arquivo, Claude, Aplicar), com a barra de etapas no topo para avançar e voltar. Funciona igual no celular e no computador. Dá para arrastar o `.3mf` para qualquer lugar da página.
 
 ## Stack
 
-React 19, Vite 6, Tailwind v4 e componentes do shadcn/ui (new-york v4). Identidade visual da marca: fundo escuro, dourado, Fraunces nos títulos e Work Sans no texto. O app usa sempre o tema escuro.
+React 19, Vite 6, Tailwind v4 e componentes do shadcn/ui (new-york v4). Motion para as animações, Three.js para a cena 3D e ícones do Phosphor. Visual "oficina técnica": sempre escuro, grafite com um acento dourado (o mesmo do catálogo), Geist no texto e Geist Mono nos dados.
 
 ## Rodar
 

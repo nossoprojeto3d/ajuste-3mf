@@ -2,36 +2,39 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Identidade Nosso Projeto 3D (mesma paleta do catálogo): fundo marrom quase preto, dourado como acento,
-   títulos em Fraunces e texto em Work Sans. A marca é escura, então o app fica sempre no tema escuro. */
+/* Visual "oficina técnica": grafite quase preto, linhas finas e um único acento dourado
+   (o mesmo dourado do catálogo, para manter a harmonia entre os projetos). Geist no texto e Geist Mono nos dados. O app fica sempre no tema escuro. */
 :root,
 .dark {
-  --background: #120e09;
-  --foreground: #f4efe3;
-  --card: #17130d;
-  --card-foreground: #f4efe3;
-  --popover: #17130d;
-  --popover-foreground: #f4efe3;
+  --background: #0b0c0e;
+  --foreground: #edeef0;
+  --card: #121316;
+  --card-foreground: #edeef0;
+  --popover: #16171b;
+  --popover-foreground: #edeef0;
   --primary: #c9a227;
   --primary-foreground: #120e09;
-  --secondary: #241c12;
-  --secondary-foreground: #f4efe3;
-  --muted: #241c12;
-  --muted-foreground: #a69c87;
-  --accent: #241c12;
-  --accent-foreground: #f4efe3;
-  --destructive: #f28b7f;
-  --border: #3a3226;
-  --input: #4d4331;
+  --secondary: #1b1c20;
+  --secondary-foreground: #edeef0;
+  --muted: #1b1c20;
+  --muted-foreground: #9399a3;
+  --accent: #1f2025;
+  --accent-foreground: #edeef0;
+  --destructive: #ff7a6b;
+  --border: #24262b;
+  --input: #2f3137;
   --ring: #e7c873;
   --primary-ink: #e7c873;
-  --warn: #f0a04b;
-  --warn-bg: #2a1d0e;
-  --add: #86d9a8;
-  --add-bg: #12281c;
-  --del: #f28b7f;
-  --del-bg: #2e1512;
+  --warn: #f2b84b;
+  --warn-bg: #2a2010;
+  --add: #6fdca4;
+  --add-bg: #10241a;
+  --del: #ff8a7d;
+  --del-bg: #2b1513;
+  --hairline: rgba(255, 255, 255, 0.07);
+  --hairline-strong: rgba(255, 255, 255, 0.13);
   --radius: 0.625rem;
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @theme inline {
@@ -60,23 +63,16 @@
   --color-add-bg: var(--add-bg);
   --color-del: var(--del);
   --color-del-bg: var(--del-bg);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: "Work Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-serif: "Fraunces", Georgia, "Times New Roman", serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --animate-accordion-down: accordion-down 0.2s ease-out;
-  --animate-accordion-up: accordion-up 0.2s ease-out;
-  @keyframes accordion-down {
-    from { height: 0; }
-    to { height: var(--radix-accordion-content-height); }
-  }
-  @keyframes accordion-up {
-    from { height: var(--radix-accordion-content-height); }
-    to { height: 0; }
-  }
+  --radius-2xl: calc(var(--radius) + 8px);
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @layer base {
@@ -85,35 +81,132 @@
   }
   html {
     -webkit-text-size-adjust: 100%;
-  }
-  h1,
-  h2 {
-    font-family: var(--font-serif);
+    color-scheme: dark;
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background font-sans text-foreground antialiased;
     font-size: 15px;
-    line-height: 1.55;
+    line-height: 1.6;
+    touch-action: manipulation;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    letter-spacing: -0.02em;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 35%, transparent);
+  }
+  [id] {
+    scroll-margin-top: 5rem;
   }
 }
 
-/* Título com traço de camadas, como uma peça impressa. Entra uma vez, camada por camada. */
-.title-layers {
-  background-image: repeating-linear-gradient(
-    to bottom,
-    var(--foreground) 0 3px,
-    color-mix(in oklab, var(--foreground) 24%, var(--background)) 3px 4px
+/* Grão fixo por cima de tudo: quebra o digital chapado sem pesar na rolagem. */
+.grain::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Fundo com malha de mesa de impressão, sumindo nas bordas. */
+.bed-grid {
+  background-image:
+    linear-gradient(to right, var(--hairline) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--hairline) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 60% at 60% 40%, #000 30%, transparent 75%);
+}
+
+/* Borda que acende sob o cursor. O JS só atualiza --mx/--my no próprio elemento. */
+.spotlight {
+  position: relative;
+  isolation: isolate;
+}
+.spotlight::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(
+    420px circle at var(--mx, 50%) var(--my, -20%),
+    color-mix(in oklab, var(--primary) 70%, transparent),
+    transparent 60%
   );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 400ms var(--ease-out-quint);
+}
+.spotlight:hover::before,
+.spotlight:focus-within::before {
+  opacity: 1;
+}
+
+/* Clique com resposta física em todos os botões. */
+[data-slot="button"] {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-duration: 200ms;
+  transition-timing-function: var(--ease-out-quint);
+}
+[data-slot="button"]:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Botão principal com brilho dourado. */
+.btn-hot {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 0 0 1px color-mix(in oklab, var(--primary) 60%, black),
+    0 8px 28px -10px color-mix(in oklab, var(--primary) 80%, transparent);
+}
+.btn-hot:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 0 0 1px color-mix(in oklab, var(--primary) 70%, black),
+    0 10px 36px -8px color-mix(in oklab, var(--primary) 95%, transparent);
+}
+
+/* Texto do título com reflexo de metal que passa uma vez. */
+.shine {
+  background: linear-gradient(
+    100deg,
+    var(--foreground) 0%,
+    var(--foreground) 40%,
+    #f6e3a8 50%,
+    var(--foreground) 60%,
+    var(--foreground) 100%
+  );
+  background-size: 250% 100%;
+  background-position: 100% 0;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: layers-print 1.2s steps(22, end) both;
+  animation: shine 2.4s var(--ease-out-quint) 0.9s both;
 }
-@keyframes layers-print {
-  from { clip-path: inset(100% -0.1em -0.3em -0.1em); }
-  to { clip-path: inset(-0.1em -0.1em -0.3em -0.1em); }
+@keyframes shine {
+  to { background-position: 0% 0; }
 }
+
 @media (prefers-reduced-motion: reduce) {
-  .title-layers { animation: none; }
-  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+  html { scroll-behavior: auto; }
+  .shine { animation: none; background-position: 0 0; }
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
