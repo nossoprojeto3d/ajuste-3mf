@@ -599,7 +599,7 @@ export default function App() {
                   transition={{ duration: 0.7, delay: 0.45, ease: EASE }}
                   className="max-w-[44ch] text-lg leading-relaxed text-muted-foreground"
                 >
-                  Envie o projeto do Bambu Studio, peça ajustes ao Claude e baixe pronto. Seu arquivo nunca sai do navegador.
+                  Envie seu projeto do Bambu Studio, diga o que você precisa e deixe a IA fazer os ajustes para você.
                 </m.p>
                 <m.div
                   initial={{ opacity: 0, y: 12 }}
