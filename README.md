@@ -21,7 +21,7 @@ Marcas de filamento disponíveis: Multifila, Volt3D, Bambu Lab, 3D Lab, Polymake
 
 ## Stack
 
-React 19, Vite 6, Tailwind v4 e componentes do shadcn/ui (new-york v4). Motion para as animações, Three.js para a cena 3D e ícones do Phosphor. Visual "oficina técnica": sempre escuro, grafite com um acento dourado (o mesmo do catálogo), Geist no texto e Geist Mono nos dados.
+React 19, Vite 6, Tailwind v4 e componentes do shadcn/ui (new-york v4). Motion para as animações, Three.js para a cena 3D e ícones do Phosphor. Visual "oficina técnica": sempre escuro, grafite com um acento laranja-filamento, Geist no texto e Geist Mono nos dados.
 
 ## Rodar
 

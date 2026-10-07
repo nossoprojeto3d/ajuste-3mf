@@ -7,7 +7,7 @@ Publicado em https://nossoprojeto3d.github.io/ajuste-3mf/. O README.md explica o
 
 React 19, Vite 6, TypeScript, Tailwind v4 e shadcn/ui (new-york v4). É o único projeto com build. Animações com Motion (`motion/react`), cena 3D com Three.js (carregada à parte) e ícones do Phosphor.
 
-Visual "oficina técnica": sempre escuro, grafite quase preto, um único acento dourado (`--primary`, o mesmo do catálogo), Geist no texto e Geist Mono nos dados (fontes do `@fontsource-variable`, sem Google Fonts). O logo continua o da marca.
+Visual "oficina técnica", diferente do catálogo de propósito: sempre escuro, grafite quase preto, um único acento laranja-filamento (`--primary`), Geist no texto e Geist Mono nos dados (fontes do `@fontsource-variable`, sem Google Fonts). O logo continua o da marca.
 
 ```bash
 npm run dev        # http://localhost:5173

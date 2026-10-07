@@ -18,7 +18,7 @@ import {
 } from "three"
 
 /* Vaso torcido impresso camada por camada. Cada camada é um anel de segmentos; o bico percorre o anel
-   atual e as últimas camadas ficam quentes (douradas) e esfriam até o cinza. Leve: só linhas, sem luz. */
+   atual e as últimas camadas ficam quentes (laranja) e esfriam até o cinza. Leve: só linhas, sem luz. */
 
 const LAYERS = 120
 const POINTS = 168
@@ -27,8 +27,8 @@ const PRINT_SECONDS = 16
 const HOLD_SECONDS = 2.8
 const FADE_SECONDS = 1.2
 
-const HOT = new Color("#e2b93b")
-const WARM = new Color("#f3dc95")
+const HOT = new Color("#ff6b2c")
+const WARM = new Color("#ffb38a")
 const COLD_LOW = new Color("#3a3d44")
 const COLD_HIGH = new Color("#a9adb6")
 

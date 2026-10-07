@@ -2,8 +2,8 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Visual "oficina técnica": grafite quase preto, linhas finas e um único acento dourado
-   (o mesmo dourado do catálogo, para manter a harmonia entre os projetos). Geist no texto e Geist Mono nos dados. O app fica sempre no tema escuro. */
+/* Visual "oficina técnica": grafite quase preto, linhas finas e um único acento laranja-filamento
+   (a cor do bico quente). Geist no texto e Geist Mono nos dados. O app fica sempre no tema escuro. */
 :root,
 .dark {
   --background: #0b0c0e;
@@ -12,8 +12,8 @@
   --card-foreground: #edeef0;
   --popover: #16171b;
   --popover-foreground: #edeef0;
-  --primary: #c9a227;
-  --primary-foreground: #120e09;
+  --primary: #ff6b2c;
+  --primary-foreground: #160a04;
   --secondary: #1b1c20;
   --secondary-foreground: #edeef0;
   --muted: #1b1c20;
@@ -23,8 +23,8 @@
   --destructive: #ff7a6b;
   --border: #24262b;
   --input: #2f3137;
-  --ring: #e7c873;
-  --primary-ink: #e7c873;
+  --ring: #ff6b2c;
+  --primary-ink: #ff8f5c;
   --warn: #f2b84b;
   --warn-bg: #2a2010;
   --add: #6fdca4;
@@ -166,7 +166,7 @@
   transform: scale(0.97);
 }
 
-/* Botão principal com brilho dourado. */
+/* Botão principal com brilho de bico quente. */
 .btn-hot {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.25),
@@ -186,7 +186,7 @@
     100deg,
     var(--foreground) 0%,
     var(--foreground) 40%,
-    #f6e3a8 50%,
+    #ffd3bd 50%,
     var(--foreground) 60%,
     var(--foreground) 100%
   );
