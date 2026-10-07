@@ -229,10 +229,10 @@ function Stepper({
 }
 
 function HeroTitle() {
-  const words = "Seu 3MF configurado pela IA.".split(" ")
+  const words = "Seu 3MF configurado por IA.".split(" ")
   return (
     <h1 className="text-[clamp(2.6rem,7.2vw,4.75rem)] leading-[1.02] font-semibold tracking-[-0.045em]">
-      <span className="sr-only">Seu 3MF configurado pela IA.</span>
+      <span className="sr-only">Seu 3MF configurado por IA.</span>
       <span aria-hidden="true" className="shine">
         {words.map((w, i) => (
           <span key={i} className="inline-block overflow-hidden pb-[0.08em] align-top">
