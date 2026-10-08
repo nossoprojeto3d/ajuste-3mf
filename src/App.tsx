@@ -93,7 +93,8 @@ const EASE = [0.22, 1, 0.36, 1] as const
 function loadForm(): FormData3mf {
   try {
     const saved = JSON.parse(localStorage.getItem(PREFS_KEY) || "{}")
-    const f = { ...DEFAULT_FORM, ...saved } as FormData3mf
+    // As observações são da peça, não da impressora: sempre começam vazias (ignora o que versões antigas salvaram).
+    const f = { ...DEFAULT_FORM, ...saved, notes: "" } as FormData3mf
     if (!OPT.printer.includes(f.printer)) f.printer = DEFAULT_FORM.printer
     if (!OPT.nozzle.includes(f.nozzle)) f.nozzle = DEFAULT_FORM.nozzle
     if (!OPT.ams.includes(f.ams)) f.ams = DEFAULT_FORM.ams
@@ -285,7 +286,9 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(PREFS_KEY, JSON.stringify(form))
+      // Guarda só impressora e filamento; as observações ficam só nesta visita.
+      const { notes: _notes, ...prefs } = form
+      localStorage.setItem(PREFS_KEY, JSON.stringify(prefs))
     } catch {
       /* sem armazenamento */
     }
