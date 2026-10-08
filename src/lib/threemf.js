@@ -338,10 +338,37 @@ function evaluateChanges(p, data) {
     return r;
   });
 }
+/* Chaves que ficam no perfil de filamento (s_Preset_filament_options do Bambu Studio). As demais que o app
+   altera ficam no perfil de processo; nenhuma fica no perfil da impressora. */
+const FILAMENT_KEYS = new Set([
+  'nozzle_temperature', 'nozzle_temperature_initial_layer', 'hot_plate_temp', 'hot_plate_temp_initial_layer',
+  'textured_plate_temp', 'textured_plate_temp_initial_layer', 'cool_plate_temp', 'cool_plate_temp_initial_layer',
+  'eng_plate_temp', 'eng_plate_temp_initial_layer', 'fan_min_speed', 'fan_max_speed', 'overhang_fan_speed',
+  'close_fan_the_first_x_layers', 'slow_down_layer_time', 'filament_max_volumetric_speed'
+]);
+/* Ao abrir o projeto, o Bambu Studio volta ao valor do perfil do sistema toda chave que não estiver listada em
+   different_settings_to_system. A lista tem uma posição para o processo (0), uma por filamento (1..n) e uma
+   para a impressora (n+1); cada posição traz as chaves separadas por ";". */
+function markDifferent(cfg, keys) {
+  const nFil = Array.isArray(cfg.filament_settings_id) && cfg.filament_settings_id.length ? cfg.filament_settings_id.length : 1;
+  const list = Array.isArray(cfg.different_settings_to_system) ? cfg.different_settings_to_system.map(v => String(v ?? '')) : [];
+  while (list.length < nFil + 2) list.push('');
+  const add = (i, k) => {
+    const set = new Set(list[i].split(';').map(x => x.trim().replace(/^"(.*)"$/, '$1')).filter(Boolean));
+    set.add(k);
+    list[i] = [...set].join(';');
+  };
+  keys.forEach(k => {
+    if (FILAMENT_KEYS.has(k)) for (let i = 1; i <= nFil; i++) add(i, k);
+    else add(0, k);
+  });
+  cfg.different_settings_to_system = list;
+}
 async function buildModified(p, accepted, opts) {
   const o = opts || {};
   const cfg = JSON.parse(JSON.stringify(p.cfg));
   accepted.forEach(c => { cfg[c.key] = c.after; });
+  markDifferent(cfg, accepted.map(c => c.key));
   const rep = new Map();
   rep.set(CFG_PATH, JSON.stringify(cfg, null, 4));
   if (o.removeOverrides && p.modelXml) {
@@ -376,7 +403,9 @@ async function makeExample() {
     nozzle_temperature: ['220', '220', '220', '220'], nozzle_temperature_initial_layer: ['220', '220', '220', '220'],
     textured_plate_temp: ['55', '55', '55', '55'], hot_plate_temp: ['55', '55', '55', '55'],
     fan_min_speed: ['100', '100', '100', '100'], overhang_fan_speed: ['100', '100', '100', '100'],
-    enable_prime_tower: '1', prime_tower_width: '35'
+    enable_prime_tower: '1', prime_tower_width: '35',
+    // Como num projeto real: processo, 4 filamentos e impressora.
+    different_settings_to_system: ['enable_support', '', '', '', '', '']
   };
   const model = '<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter"><metadata name="Application">BambuStudio-02.00.00</metadata></model>';
   const ms = '<?xml version="1.0" encoding="UTF-8"?>\n<config>\n  <object id="2">\n    <metadata key="name" value="Suporte de celular"/>\n    <metadata key="wall_loops" value="3"/>\n  </object>\n  <plate>\n    <metadata key="plater_id" value="1"/>\n  </plate>\n</config>\n';

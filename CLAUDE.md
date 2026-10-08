@@ -36,6 +36,7 @@ Todo push na `main` dispara o `.github/workflows/deploy.yml`, que roda os testes
 
 - O arquivo do usuário nunca sai do navegador. Não adicione chamada a servidor nem envie o 3MF, o nome dele, o resumo ou a resposta para a medição.
 - Só entram ajustes da lista de chaves conhecidas, dentro de faixas seguras (~55 chaves). Ao adicionar uma chave, defina a faixa e escreva o teste.
+- Toda chave alterada precisa entrar em `different_settings_to_system` (posição 0 para processo, uma por filamento, última para impressora). Sem isso, o Bambu Studio volta a chave para o valor do perfil do sistema ao abrir o projeto. Ao adicionar uma chave de filamento, inclua em `FILAMENT_KEYS` no `threemf.js`.
 - O `.env` vai para o repositório de propósito, porque o ID do Analytics é público. Segredo de verdade vai em `.env.local`.
 - Componente novo do shadcn: `npx shadcn@latest add <nome>` (o MCP do shadcn está instalado). Ainda não existe `components.json`; se o CLI pedir, crie com estilo new-york, Tailwind v4 e alias `@`.
 - Mantenha o projeto fora de pastas sincronizadas (iCloud, Dropbox), porque travam o servidor de desenvolvimento.

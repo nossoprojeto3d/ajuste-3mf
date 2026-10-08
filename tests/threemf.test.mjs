@@ -48,3 +48,27 @@ test("grava um 3MF que reabre com os valores novos", async () => {
     assert.equal(p2.objects[0].overrides.length, removeOverrides ? 0 : 1)
   }
 })
+
+test("marca as chaves alteradas para o Bambu Studio não voltar ao perfil do sistema", async () => {
+  // Ao abrir o projeto, o Bambu Studio volta ao valor do perfil toda chave fora de different_settings_to_system.
+  const p = await openProject(await makeExample())
+  const acc = evaluateChanges(p, extractJson(RESP)).filter((i) => i.status === "change")
+  const out = new Uint8Array(await (await buildModified(p, acc)).arrayBuffer())
+  const d = (await openProject(out)).cfg.different_settings_to_system
+  assert.equal(d.length, 6)
+  const keys = (s) => s.split(";").filter(Boolean)
+  assert.deepEqual(keys(d[0]), ["enable_support", "layer_height", "wall_loops", "sparse_infill_density", "sparse_infill_pattern"])
+  for (const i of [1, 2, 3, 4]) assert.deepEqual(keys(d[i]), ["nozzle_temperature"])
+  assert.equal(d[5], "")
+})
+
+test("cria a lista de diferenças quando o projeto não tem", async () => {
+  const p = await openProject(await makeExample())
+  delete p.cfg.different_settings_to_system
+  const acc = evaluateChanges(p, extractJson(RESP)).filter((i) => i.status === "change")
+  const out = new Uint8Array(await (await buildModified(p, acc)).arrayBuffer())
+  const d = (await openProject(out)).cfg.different_settings_to_system
+  assert.equal(d.length, 6)
+  assert.ok(d[0].split(";").includes("layer_height"))
+  assert.ok(d[2].split(";").includes("nozzle_temperature"))
+})
