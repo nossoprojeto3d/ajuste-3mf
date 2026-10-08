@@ -72,3 +72,18 @@ test("cria a lista de diferenças quando o projeto não tem", async () => {
   assert.ok(d[0].split(";").includes("layer_height"))
   assert.ok(d[2].split(";").includes("nozzle_temperature"))
 })
+
+test("altera a parede única do topo e marca para o Bambu Studio", async () => {
+  const p = await openProject(await makeExample())
+  const it = evaluateChanges(p, { alteracoes: [
+    { chave: "top_one_wall_type", valor: "not apply" },
+    { chave: "top_one_wall_type", valor: "duas paredes" },
+  ] })
+  assert.equal(it[0].status, "change")
+  assert.equal(it[0].after, "not apply")
+  assert.equal(it[1].status, "bad")
+  assert.match(buildSummary(p, form, "x.3mf"), /top_one_wall_type = all top/)
+  const out = await openProject(new Uint8Array(await (await buildModified(p, [it[0]])).arrayBuffer()))
+  assert.equal(out.cfg.top_one_wall_type, "not apply")
+  assert.ok(out.cfg.different_settings_to_system[0].split(";").includes("top_one_wall_type"))
+})

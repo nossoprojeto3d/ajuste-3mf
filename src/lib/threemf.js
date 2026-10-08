@@ -134,7 +134,8 @@ def('top_shell_layers', 'Camadas do topo', 'Resistência', 'int', { min: 0, max:
 def('bottom_shell_layers', 'Camadas da base', 'Resistência', 'int', { min: 0, max: 30 });
 def('sparse_infill_density', 'Densidade do preenchimento', 'Resistência', 'pct', { min: 0, max: 100 });
 def('sparse_infill_pattern', 'Padrão do preenchimento', 'Resistência', 'enum', { list: PATTERNS });
-def('only_one_wall_top', 'Uma parede só no topo', 'Resistência', 'bool');
+def('only_one_wall_top', 'Uma parede só no topo', 'Resistência', 'bool'); // nome antigo, só em projetos de versões velhas
+def('top_one_wall_type', 'Uma parede só no topo', 'Qualidade', 'enum', { list: ['not apply', 'all top', 'topmost'] });
 def('enable_support', 'Suporte ligado', 'Suporte', 'bool');
 def('support_type', 'Tipo de suporte', 'Suporte', 'enum', { list: ['normal(auto)', 'tree(auto)', 'normal(manual)', 'tree(manual)'] });
 def('support_style', 'Estilo do suporte', 'Suporte', 'enum', { list: ['default', 'grid', 'snug', 'tree_slim', 'tree_strong', 'tree_hybrid', 'tree_organic'] });
@@ -398,7 +399,7 @@ async function makeExample() {
     filament_type: ['PLA', 'PLA', 'PLA', 'PLA'], filament_settings_id: ['Multifila PLA', 'Multifila PLA', 'Multifila PLA', 'Multifila PLA'],
     filament_colour: ['#FFFFFF', '#1A1A1A', '#D8452E', '#2F6DB5'],
     layer_height: '0.2', initial_layer_print_height: '0.2', wall_loops: '2', top_shell_layers: '5', bottom_shell_layers: '3',
-    sparse_infill_density: '15%', sparse_infill_pattern: 'grid', enable_support: '0', support_type: 'normal(auto)', support_threshold_angle: '30',
+    sparse_infill_density: '15%', sparse_infill_pattern: 'grid', top_one_wall_type: 'all top', enable_support: '0', support_type: 'normal(auto)', support_threshold_angle: '30',
     brim_type: 'auto_brim', brim_width: '5', initial_layer_speed: '50', outer_wall_speed: '200', inner_wall_speed: '300', sparse_infill_speed: '270',
     nozzle_temperature: ['220', '220', '220', '220'], nozzle_temperature_initial_layer: ['220', '220', '220', '220'],
     textured_plate_temp: ['55', '55', '55', '55'], hot_plate_temp: ['55', '55', '55', '55'],
