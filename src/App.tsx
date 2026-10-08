@@ -76,6 +76,9 @@ const DEFAULT_FORM: FormData3mf = {
   notes: "",
 }
 const PREFS_KEY = "ajuste3mf.prefs"
+// Campos que mudam de peça para peça: não ficam guardados no navegador e voltam ao padrão em cada visita
+// e ao ajustar outro arquivo. O resto (impressora, bico, AMS, filamento e marca) é o setup e fica salvo.
+const PIECE_FIELDS = { use: DEFAULT_FORM.use, prio: DEFAULT_FORM.prio, notes: DEFAULT_FORM.notes }
 
 type View = 1 | 2 | 3
 
@@ -93,8 +96,8 @@ const EASE = [0.22, 1, 0.36, 1] as const
 function loadForm(): FormData3mf {
   try {
     const saved = JSON.parse(localStorage.getItem(PREFS_KEY) || "{}")
-    // As observações são da peça, não da impressora: sempre começam vazias (ignora o que versões antigas salvaram).
-    const f = { ...DEFAULT_FORM, ...saved, notes: "" } as FormData3mf
+    // Ignora campos da peça que versões antigas salvaram.
+    const f = { ...DEFAULT_FORM, ...saved, ...PIECE_FIELDS } as FormData3mf
     if (!OPT.printer.includes(f.printer)) f.printer = DEFAULT_FORM.printer
     if (!OPT.nozzle.includes(f.nozzle)) f.nozzle = DEFAULT_FORM.nozzle
     if (!OPT.ams.includes(f.ams)) f.ams = DEFAULT_FORM.ams
@@ -286,9 +289,9 @@ export default function App() {
 
   useEffect(() => {
     try {
-      // Guarda só impressora e filamento; as observações ficam só nesta visita.
-      const { notes: _notes, ...prefs } = form
-      localStorage.setItem(PREFS_KEY, JSON.stringify(prefs))
+      // Guarda só o setup; os campos da peça ficam só nesta visita.
+      const { printer, nozzle, ams, filType, brand } = form
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ printer, nozzle, ams, filType, brand }))
     } catch {
       /* sem armazenamento */
     }
@@ -491,7 +494,7 @@ export default function App() {
     }
   }
 
-  // Volta à etapa 1 para ajustar outro arquivo; mantém impressora e filamento, limpa as observações da peça
+  // Volta à etapa 1 para ajustar outro arquivo; mantém o setup e volta os campos da peça ao padrão
   function restart() {
     setProject(null)
     setFileName("")
@@ -505,7 +508,7 @@ export default function App() {
     setDownloaded(false)
     setPaste("")
     setTab("resumo")
-    set("notes", "")
+    setForm((f) => ({ ...f, ...PIECE_FIELDS }))
     track("recomecar")
     focusOnEnter.current = true
     setView(1)
